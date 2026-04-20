@@ -15,7 +15,7 @@ public class HistoStatutDemande {
     private Demande demande;
 
     @ManyToOne
-    @JoinColumn(name = "statut")
+    @JoinColumn(name = "id_statut")
     private StatutDemande statut;
 
     @Column(name = "date_changement")

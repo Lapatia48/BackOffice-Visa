@@ -1,0 +1,263 @@
+/* reset & base old money elegance */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #ebe6db 0%, #e0d9cd 100%);
+    font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+    line-height: 1.6;
+    color: #1e2a2e;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+}
+
+/* texture toile de lin subtile */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        repeating-linear-gradient(
+            45deg,
+            rgba(200, 185, 150, 0.03) 0px,
+            rgba(200, 185, 150, 0.03) 2px,
+            transparent 2px,
+            transparent 8px
+        );
+    pointer-events: none;
+    z-index: 0;
+}
+
+body > * {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    width: 100%;
+}
+
+/* titre old money */
+h1 {
+    font-family: 'Cormorant Garamond', 'Times New Roman', Georgia, serif;
+    font-weight: 400;
+    font-size: 3rem;
+    letter-spacing: -0.3px;
+    color: #2c3e2f;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #c7b28b;
+    display: inline-block;
+    padding-bottom: 0.5rem;
+    padding-right: 2rem;
+    text-transform: uppercase;
+    font-style: normal;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.02);
+}
+
+/* description élégante */
+p {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 350;
+    font-size: 1rem;
+    color: #4a5e4d;
+    margin: 1.8rem 0 2rem 0;
+    letter-spacing: 0.3px;
+    border-left: 2px solid #c7b28b;
+    padding-left: 1.2rem;
+    background: linear-gradient(90deg, rgba(199,178,139,0.05) 0%, transparent 100%);
+}
+
+/* liste premium */
+ul {
+    list-style: none;
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+li {
+    margin: 0;
+}
+
+/* liens avec bordures créatives */
+a {
+    text-decoration: none;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 450;
+    font-size: 1.05rem;
+    color: #2c3e2f;
+    background: rgba(254, 252, 248, 0.85);
+    backdrop-filter: blur(2px);
+    display: block;
+    padding: 1rem 1.8rem;
+    border-radius: 0px;
+    border: 1px solid #d4c5a9;
+    border-left-width: 4px;
+    border-left-color: #c7b28b;
+    transition: all 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    letter-spacing: 0.2px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+/* effet old money élégant au survol */
+a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(199,178,139,0.15) 0%, rgba(199,178,139,0.05) 100%);
+    z-index: -1;
+    transition: width 0.5s ease-out;
+}
+
+a:hover::before {
+    width: 100%;
+}
+
+a:hover {
+    border-left-width: 6px;
+    border-left-color: #9b8e6e;
+    border-top-color: #c7b28b;
+    border-right-color: #c7b28b;
+    border-bottom-color: #c7b28b;
+    background: rgba(254, 252, 248, 0.95);
+    color: #1a2a1c;
+    padding-left: 2rem;
+    transform: translateX(5px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+
+/* animation subtile sur le bord gauche */
+a::after {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 50%;
+    width: 0;
+    height: 0;
+    transition: all 0.3s ease;
+}
+
+a:hover::after {
+    content: '—';
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9b8e6e;
+    font-size: 0.9rem;
+    opacity: 0.6;
+}
+
+/* focus accessible */
+a:focus-visible {
+    outline: 2px solid #9b8e6e;
+    outline-offset: 4px;
+    background-color: #faf7f0;
+}
+
+/* responsive premium */
+@media (max-width: 768px) {
+    body {
+        padding: 1.5rem;
+        justify-content: flex-start;
+        padding-top: 3rem;
+    }
+
+    h1 {
+        font-size: 2.2rem;
+        padding-bottom: 0.4rem;
+    }
+
+    p {
+        font-size: 0.9rem;
+        margin: 1.2rem 0 1.5rem 0;
+    }
+
+    a {
+        padding: 0.8rem 1.4rem;
+        font-size: 0.95rem;
+        border-left-width: 3px;
+    }
+
+    a:hover {
+        padding-left: 1.8rem;
+        transform: translateX(3px);
+        border-left-width: 4px;
+    }
+    
+    a:hover::after {
+        left: -15px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+        border-bottom-width: 1.5px;
+    }
+
+    ul {
+        gap: 0.8rem;
+    }
+    
+    a {
+        padding: 0.7rem 1.2rem;
+    }
+    
+    a:hover {
+        padding-left: 1.5rem;
+    }
+}
+
+/* micro-interaction UX premium */
+a:active {
+    transform: translateX(2px);
+    transition: 0.05s;
+}
+
+/* ombre douce et coin décoratif old money */
+body::after {
+    content: '';
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 80px;
+    height: 80px;
+    border-right: 1px solid rgba(199,178,139,0.3);
+    border-bottom: 1px solid rgba(199,178,139,0.3);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* coin supérieur gauche */
+@media (min-width: 769px) {
+    body {
+        box-shadow: inset 0 0 0 1px rgba(199,178,139,0.1);
+    }
+}
+
+/* élégance supplémentaire : grain subtil */
+body {
+    background-blend-mode: overlay;
+}

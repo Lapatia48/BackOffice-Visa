@@ -3,12 +3,11 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>BackOffice Visa - Succès</title>
+    <title>BackOffice Visa - Duplicata</title>
 </head>
 <body>
-<h1>Succès</h1>
-<p>${message}</p>
-<p>Etat de la demande enregistre selon les dossiers fournis.</p>
+<h1>Duplicata</h1>
+<p>La fonctionnalite Duplicata sera ajoutee dans la prochaine iteration.</p>
 <a href="/">Retour accueil</a>
 </body>
 </html>

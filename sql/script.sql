@@ -75,7 +75,44 @@ CREATE TABLE Demande (
 CREATE TABLE Histo_statut_demande (
     id SERIAL PRIMARY KEY,
     id_demande INT REFERENCES Demande(id),
-    statut INT REFERENCES Statut_demande(id),
+    id_statut INT REFERENCES Statut_demande(id),
     date_changement TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     commentaire VARCHAR(255)
 );
+
+CREATE TABLE Dossiers (
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(255) NOT NULL UNIQUE,
+    obligatoire BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Dossier_type_visa (
+    id SERIAL PRIMARY KEY,
+    id_dossier INT NOT NULL REFERENCES Dossiers(id),
+    id_type_visa INT NULL REFERENCES Type_demande(id)
+);
+
+CREATE UNIQUE INDEX ux_dossier_type_nonnull
+ON Dossier_type_visa(id_dossier, id_type_visa)
+WHERE id_type_visa IS NOT NULL;
+
+CREATE UNIQUE INDEX ux_dossier_type_common
+ON Dossier_type_visa(id_dossier)
+WHERE id_type_visa IS NULL;
+
+CREATE TABLE Demande_dossier (
+    id SERIAL PRIMARY KEY,
+    id_demande INT NOT NULL REFERENCES Demande(id),
+    id_dossier INT NOT NULL REFERENCES Dossiers(id),
+    est_fourni BOOLEAN NOT NULL DEFAULT FALSE,
+    date_mise_a_jour TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    commentaire VARCHAR(255)
+);
+
+CREATE UNIQUE INDEX ux_demande_dossier_unique
+ON Demande_dossier(id_demande, id_dossier);
+
+CREATE INDEX ix_demande_dossier_demande ON Demande_dossier(id_demande);
+CREATE INDEX ix_demande_dossier_dossier ON Demande_dossier(id_dossier);
