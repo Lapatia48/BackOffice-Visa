@@ -88,11 +88,11 @@ h1 {
 
 /* Message d'erreur élégant */
 .error {
-    background: #fef7e8;
-    border-left: 4px solid #d4a373;
+    background: #e47272;
+    border-left: 4px solid #ff0000;
     padding: 0.9rem 1.25rem;
     border-radius: var(--radius-sm);
-    color: #8b6b4a;
+    color: #000000;
     font-size: 0.875rem;
     margin-bottom: 1.75rem;
 }

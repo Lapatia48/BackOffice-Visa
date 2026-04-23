@@ -36,7 +36,7 @@
 
 <div class="horizontal-sidebar">
     <a href="/">Retour accueil</a>
-    <a href="#">Dossiers en cours</a>
+    <a href="${pageContext.request.contextPath}/dossiers-en-cours">Dossiers en cours</a>
 </div>
 
 <% if (error != null && !error.isEmpty()) { %>
@@ -96,6 +96,10 @@
                     <% } %>
                 </div>
             <% } %>
+        </div>
+
+        <div class="bloc">
+            <button type="submit">Confirmer</button>
         </div>
     </div>
 

@@ -20,11 +20,11 @@ import java.util.Map;
 import java.util.Set;
 
 @Controller
-public class HomeController {
+public class NouveauTitreController {
     private final DossierService dossierService;
     private final DemandeWorkflowService demandeWorkflowService;
 
-    public HomeController(DossierService dossierService, DemandeWorkflowService demandeWorkflowService) {
+    public NouveauTitreController(DossierService dossierService, DemandeWorkflowService demandeWorkflowService) {
         this.dossierService = dossierService;
         this.demandeWorkflowService = demandeWorkflowService;
     }
@@ -108,6 +108,11 @@ public class HomeController {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return "redirect:/nouveau-titre";
         }
+    }
+
+    @GetMapping("/dossiers-en-cours")
+    public String DossierEnCours() {
+        
     }
 
     @GetMapping("/duplicata")
