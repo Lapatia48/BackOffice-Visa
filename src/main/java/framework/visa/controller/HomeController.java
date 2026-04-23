@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Controller
 public class HomeController {
@@ -66,6 +68,24 @@ public class HomeController {
             @RequestParam(required = false) String observations,
             RedirectAttributes redirectAttributes) {
         try {
+                List<Dossier> requiredDossiers = dossierService.findCommonDossiers().stream()
+                    .filter(Dossier::isObligatoire)
+                    .toList();
+                requiredDossiers = new java.util.ArrayList<>(requiredDossiers);
+                requiredDossiers.addAll(
+                    dossierService.findDossiersByType(typeVisaId).stream()
+                        .filter(Dossier::isObligatoire)
+                        .toList()
+                );
+
+                Set<Integer> selectedDossierIds = dossierIds == null ? Set.of() : new HashSet<>(dossierIds);
+                boolean hasMissingRequiredDossier = requiredDossiers.stream()
+                    .anyMatch(dossier -> !selectedDossierIds.contains(dossier.getId()));
+
+                if (hasMissingRequiredDossier) {
+                throw new IllegalArgumentException("Tous les dossiers obligatoires doivent etre coches.");
+                }
+
             Integer demandeId = demandeWorkflowService.submitNouveauTitre(
                     nom,
                     prenom,
