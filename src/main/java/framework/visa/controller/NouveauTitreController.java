@@ -1,7 +1,10 @@
 package framework.visa.controller;
 
+import framework.visa.entity.Demande;
+import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Dossier;
 import framework.visa.entity.TypeDemande;
+import framework.visa.service.DemandeDossierService;
 import framework.visa.service.DemandeWorkflowService;
 import framework.visa.service.DossierService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,10 +27,15 @@ import java.util.Set;
 public class NouveauTitreController {
     private final DossierService dossierService;
     private final DemandeWorkflowService demandeWorkflowService;
+    private final DemandeDossierService demandeDossierService;
 
-    public NouveauTitreController(DossierService dossierService, DemandeWorkflowService demandeWorkflowService) {
+    public NouveauTitreController(
+            DossierService dossierService,
+            DemandeWorkflowService demandeWorkflowService,
+            DemandeDossierService demandeDossierService) {
         this.dossierService = dossierService;
         this.demandeWorkflowService = demandeWorkflowService;
+        this.demandeDossierService = demandeDossierService;
     }
 
     @GetMapping("/")
@@ -111,8 +120,75 @@ public class NouveauTitreController {
     }
 
     @GetMapping("/dossiers-en-cours")
-    public String DossierEnCours() {
-        
+    public String dossierEnCours(Model model) {
+        List<Demande> demandesEnCours = demandeDossierService.findDemandesIncompletes();
+
+        Map<Integer, Long> totalPiecesByDemande = new HashMap<>();
+        Map<Integer, Long> providedPiecesByDemande = new HashMap<>();
+        Map<Integer, Long> remainingPiecesByDemande = new HashMap<>();
+
+        if (!demandesEnCours.isEmpty()) {
+            List<Integer> demandeIds = demandesEnCours.stream()
+                    .map(Demande::getId)
+                    .toList();
+
+            List<DemandeDossier> lignes = demandeDossierService.findByDemandeIds(demandeIds);
+            for (DemandeDossier ligne : lignes) {
+                Integer demandeId = ligne.getDemande().getId();
+                totalPiecesByDemande.merge(demandeId, 1L, Long::sum);
+
+                if (ligne.isEstFourni()) {
+                    providedPiecesByDemande.merge(demandeId, 1L, Long::sum);
+                } else {
+                    remainingPiecesByDemande.merge(demandeId, 1L, Long::sum);
+                }
+            }
+        }
+
+        model.addAttribute("demandesEnCours", demandesEnCours);
+        model.addAttribute("totalPiecesByDemande", totalPiecesByDemande);
+        model.addAttribute("providedPiecesByDemande", providedPiecesByDemande);
+        model.addAttribute("remainingPiecesByDemande", remainingPiecesByDemande);
+        return "dossiers-en-cours";
+    }
+
+    @GetMapping("/dossiers-en-cours/ajout")
+    public String ajoutDossier(@RequestParam Integer demandeId, Model model, RedirectAttributes redirectAttributes) {
+        try {
+            Demande demande = demandeDossierService.findDemandeById(demandeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+
+            List<DemandeDossier> dossiersRestants = demandeDossierService.findByDemandeId(demandeId).stream()
+                    .filter(demandeDossier -> !demandeDossier.isEstFourni())
+                    .toList();
+
+            if (dossiersRestants.isEmpty()) {
+                redirectAttributes.addFlashAttribute("message", "Cette demande est deja complete.");
+                return "redirect:/dossiers-en-cours";
+            }
+
+            model.addAttribute("demande", demande);
+            model.addAttribute("dossiersRestants", dossiersRestants);
+            return "ajout-dossier";
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return "redirect:/dossiers-en-cours";
+        }
+    }
+
+    @PostMapping("/dossiers-en-cours/ajout")
+    public String submitAjoutDossier(
+            @RequestParam Integer demandeId,
+            @RequestParam(required = false) List<Integer> dossierIds,
+            RedirectAttributes redirectAttributes) {
+        try {
+            demandeDossierService.completeMissingDossiers(demandeId, dossierIds);
+            redirectAttributes.addFlashAttribute("message", "Dossiers mis a jour pour la demande #" + demandeId + ".");
+            return "redirect:/dossiers-en-cours";
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return "redirect:/dossiers-en-cours/ajout?demandeId=" + demandeId;
+        }
     }
 
     @GetMapping("/duplicata")
