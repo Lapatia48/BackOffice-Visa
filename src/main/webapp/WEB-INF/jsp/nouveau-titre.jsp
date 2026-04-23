@@ -38,6 +38,7 @@
     <a href="/">Retour accueil</a>
     <a href="${pageContext.request.contextPath}/nouveau-titre">Nouveau titre</a>
     <a href="${pageContext.request.contextPath}/dossiers-en-cours">Dossiers en cours</a>
+    <a href="${pageContext.request.contextPath}/dossier-terminee">Dossiers termines</a>
 </div>
 
 <% if (error != null && !error.isEmpty()) { %>

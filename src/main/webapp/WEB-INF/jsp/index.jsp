@@ -14,6 +14,8 @@
 
 <ul>
     <li><a href="/nouveau-titre">Nouveau titre</a></li>
+    <li><a href="/dossiers-en-cours">Dossiers en cours</a></li>
+    <li><a href="/dossier-terminee">Dossiers termines</a></li>
     <li><a href="/duplicata">Duplicata</a></li>
     <li><a href="/transfert-visa">Transfert visa</a></li>
 </ul>

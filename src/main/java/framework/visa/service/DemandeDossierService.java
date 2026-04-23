@@ -1,22 +1,28 @@
 package framework.visa.service;
 
+import framework.visa.config.VisaConfig;
+import framework.visa.entity.CategorieVisa;
 import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Demandeur;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Passeport;
 import framework.visa.entity.StatutDemande;
+import framework.visa.entity.Visa;
+import framework.visa.repository.CategorieVisaRepository;
 import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
 import framework.visa.repository.DemandeurRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.PasseportRepository;
 import framework.visa.repository.StatutDemandeRepository;
+import framework.visa.repository.VisaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -26,6 +32,8 @@ import java.util.Set;
 @Service
 public class DemandeDossierService {
     private static final String STATUS_TERMINEE = "terminee";
+    private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
+    private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final DemandeDossierRepository repository;
     private final DemandeRepository demandeRepository;
@@ -33,6 +41,9 @@ public class DemandeDossierService {
     private final PasseportRepository passeportRepository;
     private final StatutDemandeRepository statutDemandeRepository;
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
+    private final VisaRepository visaRepository;
+    private final CategorieVisaRepository categorieVisaRepository;
+    private final VisaConfig visaConfig;
 
     public DemandeDossierService(
             DemandeDossierRepository repository,
@@ -40,13 +51,19 @@ public class DemandeDossierService {
             DemandeurRepository demandeurRepository,
             PasseportRepository passeportRepository,
             StatutDemandeRepository statutDemandeRepository,
-            HistoStatutDemandeRepository histoStatutDemandeRepository) {
+            HistoStatutDemandeRepository histoStatutDemandeRepository,
+            VisaRepository visaRepository,
+            CategorieVisaRepository categorieVisaRepository,
+            VisaConfig visaConfig) {
         this.repository = repository;
         this.demandeRepository = demandeRepository;
         this.demandeurRepository = demandeurRepository;
         this.passeportRepository = passeportRepository;
         this.statutDemandeRepository = statutDemandeRepository;
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
+        this.visaRepository = visaRepository;
+        this.categorieVisaRepository = categorieVisaRepository;
+        this.visaConfig = visaConfig;
     }
 
     public List<DemandeDossier> findAll() {
@@ -55,6 +72,10 @@ public class DemandeDossierService {
 
     public List<Demande> findDemandesen_courses() {
         return demandeRepository.findDemandesen_courses();
+    }
+
+    public List<Demande> findDossiersTermineesNouveauTitre() {
+        return demandeRepository.findDossiersTermineesNouveauTitre();
     }
 
     public Optional<Demande> findDemandeById(Integer demandeId) {
@@ -158,6 +179,7 @@ public class DemandeDossierService {
         if (!hasMissing && !alreadyCompleted) {
             StatutDemande complet = getOrCreateStatus(STATUS_TERMINEE);
             demande.setStatut(complet);
+            issueVisaIfNeeded(demande);
             demandeRepository.save(demande);
 
             HistoStatutDemande historique = new HistoStatutDemande();
@@ -166,7 +188,57 @@ public class DemandeDossierService {
             historique.setDateChangement(LocalDateTime.now());
             historique.setCommentaire("Demande completee apres ajout de pieces manquantes.");
             histoStatutDemandeRepository.save(historique);
+        } else if (!hasMissing) {
+            issueVisaIfNeeded(demande);
+            demandeRepository.save(demande);
         }
+    }
+
+    private void issueVisaIfNeeded(Demande demande) {
+        if (demande.getVisa() != null) {
+            return;
+        }
+
+        Visa visa = createVisaForNouveauTitre(demande);
+        demande.setVisa(visa);
+    }
+
+    private Visa createVisaForNouveauTitre(Demande demande) {
+        Demandeur demandeur = demande.getDemandeur();
+        if (demandeur == null || demandeur.getId() == null) {
+            throw new IllegalArgumentException("Impossible de creer le visa: demandeur introuvable.");
+        }
+
+        Passeport passeport = passeportRepository.findFirstByDemandeurIdOrderByIdDesc(demandeur.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Impossible de creer le visa: passeport introuvable."));
+
+        CategorieVisa categorieVisa = resolveNouveauTitreCategorie();
+
+        LocalDate dateDebut = LocalDate.now();
+        LocalDate dateFin = dateDebut.plusMonths(visaConfig.getDureeVisaMois());
+
+        Visa visa = new Visa();
+        visa.setReference(buildVisaReference(demande.getId()));
+        visa.setDateDebut(dateDebut);
+        visa.setDateFin(dateFin);
+        visa.setCategorieVisa(categorieVisa);
+        visa.setPasseport(passeport);
+        return visaRepository.save(visa);
+    }
+
+    private CategorieVisa resolveNouveauTitreCategorie() {
+        return categorieVisaRepository.findFirstByLibelleIgnoreCase(CATEGORIE_NOUVEAU_TITRE)
+                .or(() -> categorieVisaRepository.findFirstByLibelleIgnoreCase("nouveau titre"))
+                .orElseGet(() -> {
+                    CategorieVisa categorieVisa = new CategorieVisa();
+                    categorieVisa.setLibelle(CATEGORIE_NOUVEAU_TITRE);
+                    return categorieVisaRepository.save(categorieVisa);
+                });
+    }
+
+    private String buildVisaReference(Integer demandeId) {
+        String timestamp = LocalDateTime.now().format(REFERENCE_TIMESTAMP_FORMATTER);
+        return "VISA-NT-" + demandeId + "-" + timestamp;
     }
 
     private void updateDemandeurAndPasseport(

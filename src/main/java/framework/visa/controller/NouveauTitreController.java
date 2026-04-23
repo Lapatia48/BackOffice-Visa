@@ -152,6 +152,13 @@ public class NouveauTitreController {
         return "dossiers-en-cours";
     }
 
+    @GetMapping("/dossier-terminee")
+    public String dossierTerminee(Model model) {
+        List<Demande> dossiersTerminees = demandeDossierService.findDossiersTermineesNouveauTitre();
+        model.addAttribute("dossiersTerminees", dossiersTerminees);
+        return "dossier-terminee";
+    }
+
     @GetMapping("/dossiers-en-cours/ajout")
     public String ajoutDossier(@RequestParam Integer demandeId, Model model, RedirectAttributes redirectAttributes) {
         try {
