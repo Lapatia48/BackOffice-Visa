@@ -11,6 +11,9 @@ import java.util.*;
 
 @Service
 public class DemandeWorkflowService {
+        private static final String STATUS_EN_COURS = "en_cours";
+        private static final String STATUS_TERMINEE = "terminee";
+
     private final DemandeurRepository demandeurRepository;
     private final PasseportRepository passeportRepository;
     private final DemandeRepository demandeRepository;
@@ -74,10 +77,10 @@ public class DemandeWorkflowService {
                         applicableDossiersById.put(dossier.getId(), dossier);
                 }
 
-                boolean hasMissingRequired = false;
+                boolean hasMissingDossier = false;
                 for (Dossier dossier : applicableDossiersById.values()) {
-                        if (dossier.isObligatoire() && !selectedDossierIds.contains(dossier.getId())) {
-                                hasMissingRequired = true;
+                        if (!selectedDossierIds.contains(dossier.getId())) {
+                                hasMissingDossier = true;
                                 break;
                         }
                 }
@@ -102,7 +105,7 @@ public class DemandeWorkflowService {
                 passeport.setPaysDelivrance(paysDelivrance);
                 passeportRepository.save(passeport);
 
-                StatutDemande statut = getOrCreateStatus(hasMissingRequired ? "INCOMPLET" : "COMPLET");
+                StatutDemande statut = getOrCreateStatus(hasMissingDossier ? STATUS_EN_COURS : STATUS_TERMINEE);
 
                 Demande demande = new Demande();
                 demande.setDateDemande(LocalDate.now());
@@ -127,8 +130,8 @@ public class DemandeWorkflowService {
                 historique.setDemande(demande);
                 historique.setStatut(statut);
                 historique.setDateChangement(LocalDateTime.now());
-                historique.setCommentaire(hasMissingRequired
-                                ? "Demande enregistree avec pieces obligatoires manquantes."
+                historique.setCommentaire(hasMissingDossier
+                                ? "Demande enregistree avec pieces manquantes."
                                 : "Demande enregistree avec dossier complet.");
                 histoStatutDemandeRepository.save(historique);
 

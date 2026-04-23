@@ -121,7 +121,7 @@ public class NouveauTitreController {
 
     @GetMapping("/dossiers-en-cours")
     public String dossierEnCours(Model model) {
-        List<Demande> demandesEnCours = demandeDossierService.findDemandesIncompletes();
+        List<Demande> demandesEnCours = demandeDossierService.findDemandesen_courses();
 
         Map<Integer, Long> totalPiecesByDemande = new HashMap<>();
         Map<Integer, Long> providedPiecesByDemande = new HashMap<>();

@@ -20,6 +20,8 @@ import java.util.Set;
 
 @Service
 public class DemandeDossierService {
+    private static final String STATUS_TERMINEE = "terminee";
+
     private final DemandeDossierRepository repository;
     private final DemandeRepository demandeRepository;
     private final StatutDemandeRepository statutDemandeRepository;
@@ -40,8 +42,8 @@ public class DemandeDossierService {
         return repository.findAll();
     }
 
-    public List<Demande> findDemandesIncompletes() {
-        return demandeRepository.findDemandesIncompletes();
+    public List<Demande> findDemandesen_courses() {
+        return demandeRepository.findDemandesen_courses();
     }
 
     public Optional<Demande> findDemandeById(Integer demandeId) {
@@ -100,7 +102,7 @@ public class DemandeDossierService {
 
         boolean hasMissing = lignes.stream().anyMatch(ligne -> !ligne.isEstFourni());
         if (!hasMissing) {
-            StatutDemande complet = getOrCreateStatus("COMPLET");
+            StatutDemande complet = getOrCreateStatus(STATUS_TERMINEE);
             demande.setStatut(complet);
             demandeRepository.save(demande);
 

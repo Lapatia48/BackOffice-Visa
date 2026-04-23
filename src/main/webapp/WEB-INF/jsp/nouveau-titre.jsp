@@ -36,6 +36,7 @@
 
 <div class="horizontal-sidebar">
     <a href="/">Retour accueil</a>
+    <a href="${pageContext.request.contextPath}/nouveau-titre">Nouveau titre</a>
     <a href="${pageContext.request.contextPath}/dossiers-en-cours">Dossiers en cours</a>
 </div>
 

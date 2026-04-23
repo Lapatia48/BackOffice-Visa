@@ -29,15 +29,15 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO Statut_demande (libelle)
-SELECT 'INCOMPLET'
+SELECT 'en_cours'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'incomplet'
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'en_cours'
 );
 
 INSERT INTO Statut_demande (libelle)
-SELECT 'COMPLET'
+SELECT 'terminee'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'complet'
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'terminee'
 );
 
 INSERT INTO Dossiers (libelle, obligatoire)
