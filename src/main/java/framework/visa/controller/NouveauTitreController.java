@@ -168,6 +168,7 @@ public class NouveauTitreController {
             }
 
             model.addAttribute("demande", demande);
+            model.addAttribute("passeport", demandeDossierService.findPasseportByDemandeId(demandeId).orElse(null));
             model.addAttribute("dossiersRestants", dossiersRestants);
             return "ajout-dossier";
         } catch (IllegalArgumentException exception) {
@@ -180,10 +181,42 @@ public class NouveauTitreController {
     public String submitAjoutDossier(
             @RequestParam Integer demandeId,
             @RequestParam(required = false) List<Integer> dossierIds,
+            @RequestParam(defaultValue = "false") boolean editInformations,
+            @RequestParam(required = false) String nom,
+            @RequestParam(required = false) String prenom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
+            @RequestParam(required = false) String lieuNaissance,
+            @RequestParam(required = false) String telephone,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String adresse,
+            @RequestParam(required = false) String numeroPasseport,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDelivrance,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpiration,
+            @RequestParam(required = false) String paysDelivrance,
             RedirectAttributes redirectAttributes) {
         try {
-            demandeDossierService.completeMissingDossiers(demandeId, dossierIds);
-            redirectAttributes.addFlashAttribute("message", "Dossiers mis a jour pour la demande #" + demandeId + ".");
+            demandeDossierService.completeMissingDossiers(
+                    demandeId,
+                    dossierIds,
+                    editInformations,
+                    nom,
+                    prenom,
+                    dateNaissance,
+                    lieuNaissance,
+                    telephone,
+                    email,
+                    adresse,
+                    numeroPasseport,
+                    dateDelivrance,
+                    dateExpiration,
+                    paysDelivrance
+            );
+
+            if (editInformations) {
+                redirectAttributes.addFlashAttribute("message", "Dossiers et informations mis a jour pour la demande #" + demandeId + ".");
+            } else {
+                redirectAttributes.addFlashAttribute("message", "Dossiers mis a jour pour la demande #" + demandeId + ".");
+            }
             return "redirect:/dossiers-en-cours";
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
