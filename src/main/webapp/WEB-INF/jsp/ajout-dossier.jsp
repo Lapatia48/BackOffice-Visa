@@ -45,7 +45,7 @@
 <div class="horizontal-sidebar">
     <a href="${pageContext.request.contextPath}/">Retour accueil</a>
     <a href="${pageContext.request.contextPath}/dossiers-en-cours">Dossiers en cours</a>
-    <a href="${pageContext.request.contextPath}/dossier-terminee">Dossiers termines</a>
+    <a href="${pageContext.request.contextPath}/dossier-terminee">Nouveaux titres</a>
 </div>
 
 <% if (error != null && !error.isEmpty()) { %>
