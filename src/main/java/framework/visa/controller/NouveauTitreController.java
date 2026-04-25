@@ -145,7 +145,7 @@ public class NouveauTitreController {
                     observations
             );
             redirectAttributes.addFlashAttribute("message", "Demande #" + demandeId + " enregistree avec succes.");
-            return "dossier-en-cours";
+            return "redirect:/dossiers-en-cours";
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return "redirect:/nouveau-titre";
