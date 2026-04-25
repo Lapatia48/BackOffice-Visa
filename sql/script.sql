@@ -51,6 +51,18 @@ CREATE TABLE Passeport (
     pays_delivrance VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE Visa_transformable (
+    id SERIAL PRIMARY KEY,
+    id_demandeur INT NOT NULL REFERENCES Demandeur(id),
+    reference VARCHAR(50) NOT NULL,
+    date_arrivee_madagascar DATE NOT NULL,
+    lieu_entree_madagascar VARCHAR(100) NOT NULL,
+    date_donnation DATE NOT NULL,
+    date_expiration DATE NOT NULL
+);
+
+CREATE INDEX ix_visa_transformable_demandeur ON Visa_transformable(id_demandeur);
+
 CREATE TABLE Visa (
     id SERIAL PRIMARY KEY,
     reference VARCHAR(50) NOT NULL,

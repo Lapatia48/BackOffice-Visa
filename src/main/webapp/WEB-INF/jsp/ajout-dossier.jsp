@@ -7,6 +7,7 @@
 <%@ page import="framework.visa.entity.Nationalite" %>
 <%@ page import="framework.visa.entity.Passeport" %>
 <%@ page import="framework.visa.entity.SituationFamiliale" %>
+<%@ page import="framework.visa.entity.VisaTransformable" %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -18,6 +19,7 @@
 <%
     Demande demande = (Demande) request.getAttribute("demande");
     Passeport passeport = (Passeport) request.getAttribute("passeport");
+    VisaTransformable visaTransformable = (VisaTransformable) request.getAttribute("visaTransformable");
 
     List<DemandeDossier> dossiersRestants = (List<DemandeDossier>) request.getAttribute("dossiersRestants");
     if (dossiersRestants == null) {
@@ -177,6 +179,25 @@
             </label>
             <label>Pays de delivrance
                 <input class="editable-info" type="text" name="paysDelivrance" value="<%= passeport == null ? "" : passeport.getPaysDelivrance() %>" readonly>
+            </label>
+        </div>
+
+        <div class="bloc">
+            <h2 class="section-title">Visa transformable (pre-rempli)</h2>
+            <label>Reference visa
+                <input class="editable-info" type="text" name="referenceVisaTransformable" value="<%= visaTransformable == null ? "" : visaTransformable.getReference() %>" readonly>
+            </label>
+            <label>Date d'arrivee a Madagascar
+                <input class="editable-info" type="date" name="dateArriveeMadagascar" value="<%= visaTransformable == null || visaTransformable.getDateArriveeMadagascar() == null ? "" : visaTransformable.getDateArriveeMadagascar() %>" readonly>
+            </label>
+            <label>Lieu d'entree a Madagascar
+                <input class="editable-info" type="text" name="lieuEntreeMadagascar" value="<%= visaTransformable == null ? "" : visaTransformable.getLieuEntreeMadagascar() %>" readonly>
+            </label>
+            <label>Date de donnation
+                <input class="editable-info" type="date" name="dateDonnationVisaTransformable" value="<%= visaTransformable == null || visaTransformable.getDateDonnation() == null ? "" : visaTransformable.getDateDonnation() %>" readonly>
+            </label>
+            <label>Date d'expiration
+                <input class="editable-info" type="date" name="dateExpirationVisaTransformable" value="<%= visaTransformable == null || visaTransformable.getDateExpiration() == null ? "" : visaTransformable.getDateExpiration() %>" readonly>
             </label>
         </div>
     </div>

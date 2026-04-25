@@ -29,9 +29,9 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO Statut_demande (libelle)
-SELECT 'en_cours'
+SELECT 'cree'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'en_cours'
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'cree'
 );
 
 INSERT INTO Statut_demande (libelle)

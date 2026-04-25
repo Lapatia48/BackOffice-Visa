@@ -93,6 +93,11 @@ public class NouveauTitreController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDelivrance,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpiration,
             @RequestParam String paysDelivrance,
+            @RequestParam String referenceVisaTransformable,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateArriveeMadagascar,
+            @RequestParam String lieuEntreeMadagascar,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDonnationVisaTransformable,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpirationVisaTransformable,
             @RequestParam Integer typeVisaId,
             @RequestParam(required = false) List<Integer> dossierIds,
             @RequestParam(required = false) String observations,
@@ -130,12 +135,17 @@ public class NouveauTitreController {
                     dateDelivrance,
                     dateExpiration,
                     paysDelivrance,
+                    referenceVisaTransformable,
+                    dateArriveeMadagascar,
+                    lieuEntreeMadagascar,
+                    dateDonnationVisaTransformable,
+                    dateExpirationVisaTransformable,
                     typeVisaId,
                     dossierIds,
                     observations
             );
             redirectAttributes.addFlashAttribute("message", "Demande #" + demandeId + " enregistree avec succes.");
-            return "redirect:/success";
+            return "dossier-en-cours";
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return "redirect:/nouveau-titre";
@@ -144,7 +154,7 @@ public class NouveauTitreController {
 
     @GetMapping("/dossiers-en-cours")
     public String dossierEnCours(Model model) {
-        List<Demande> demandesEnCours = demandeDossierService.findDemandesen_courses();
+        List<Demande> demandesEnCours = demandeDossierService.findDemandescreees();
 
         Map<Integer, Long> totalPiecesByDemande = new HashMap<>();
         Map<Integer, Long> providedPiecesByDemande = new HashMap<>();
@@ -273,6 +283,7 @@ public class NouveauTitreController {
 
             model.addAttribute("demande", demande);
             model.addAttribute("passeport", demandeDossierService.findPasseportByDemandeId(demandeId).orElse(null));
+            model.addAttribute("visaTransformable", demandeDossierService.findVisaTransformableByDemandeId(demandeId).orElse(null));
             model.addAttribute("dossiersRestants", dossiersRestants);
             model.addAttribute("situationsFamiliales", situationFamilialeService.findAll());
             model.addAttribute("nationalites", nationaliteService.findAll());
@@ -301,6 +312,11 @@ public class NouveauTitreController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDelivrance,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpiration,
             @RequestParam(required = false) String paysDelivrance,
+            @RequestParam(required = false) String referenceVisaTransformable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateArriveeMadagascar,
+            @RequestParam(required = false) String lieuEntreeMadagascar,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDonnationVisaTransformable,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpirationVisaTransformable,
             RedirectAttributes redirectAttributes) {
         try {
             demandeDossierService.completeMissingDossiers(
@@ -319,7 +335,12 @@ public class NouveauTitreController {
                     numeroPasseport,
                     dateDelivrance,
                     dateExpiration,
-                    paysDelivrance
+                        paysDelivrance,
+                        referenceVisaTransformable,
+                        dateArriveeMadagascar,
+                        lieuEntreeMadagascar,
+                        dateDonnationVisaTransformable,
+                        dateExpirationVisaTransformable
             );
 
             if (editInformations) {

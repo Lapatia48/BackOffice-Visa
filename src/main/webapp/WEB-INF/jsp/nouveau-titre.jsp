@@ -61,7 +61,25 @@
 
     <div class="gauche">
         <div class="bloc">
-            <h2 class="section-title">Type visa</h2>
+            <h2 class="section-title">Visa transformable</h2>
+            <label>Reference visa
+                <input type="text" name="referenceVisaTransformable" required>
+            </label>
+            <label>Date d'arrivee a Madagascar
+                <input type="date" name="dateArriveeMadagascar" required>
+            </label>
+            <label>Lieu d'entree a Madagascar
+                <input type="text" name="lieuEntreeMadagascar" required>
+            </label>
+            <label>Date de donnation
+                <input type="date" name="dateDonnationVisaTransformable" required>
+            </label>
+            <label>Date d'expiration
+                <input type="date" name="dateExpirationVisaTransformable" required>
+            </label>
+        </div>
+        <div class="bloc">
+            <h2 class="section-title">Type visa demandée</h2>
             <label>Selectionner un type
                 <select id="typeVisaId" name="typeVisaId" required>
                     <option value="">-- choisir --</option>

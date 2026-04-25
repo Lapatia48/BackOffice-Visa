@@ -9,6 +9,7 @@ import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Passeport;
 import framework.visa.entity.StatutDemande;
 import framework.visa.entity.Visa;
+import framework.visa.entity.VisaTransformable;
 import framework.visa.repository.CategorieVisaRepository;
 import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
@@ -19,6 +20,7 @@ import framework.visa.repository.PasseportRepository;
 import framework.visa.repository.SituationFamilialeRepository;
 import framework.visa.repository.StatutDemandeRepository;
 import framework.visa.repository.VisaRepository;
+import framework.visa.repository.VisaTransformableRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +48,7 @@ public class DemandeDossierService {
     private final StatutDemandeRepository statutDemandeRepository;
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
     private final VisaRepository visaRepository;
+    private final VisaTransformableRepository visaTransformableRepository;
     private final CategorieVisaRepository categorieVisaRepository;
     private final VisaConfig visaConfig;
 
@@ -59,6 +62,7 @@ public class DemandeDossierService {
             StatutDemandeRepository statutDemandeRepository,
             HistoStatutDemandeRepository histoStatutDemandeRepository,
             VisaRepository visaRepository,
+            VisaTransformableRepository visaTransformableRepository,
             CategorieVisaRepository categorieVisaRepository,
             VisaConfig visaConfig) {
         this.repository = repository;
@@ -70,6 +74,7 @@ public class DemandeDossierService {
         this.statutDemandeRepository = statutDemandeRepository;
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
         this.visaRepository = visaRepository;
+        this.visaTransformableRepository = visaTransformableRepository;
         this.categorieVisaRepository = categorieVisaRepository;
         this.visaConfig = visaConfig;
     }
@@ -78,8 +83,8 @@ public class DemandeDossierService {
         return repository.findAll();
     }
 
-    public List<Demande> findDemandesen_courses() {
-        return demandeRepository.findDemandesen_courses();
+    public List<Demande> findDemandescreees() {
+        return demandeRepository.findDemandescreees();
     }
 
     public List<Demande> findDossiersTermineesNouveauTitre() {
@@ -95,6 +100,13 @@ public class DemandeDossierService {
                 .map(Demande::getDemandeur)
                 .map(Demandeur::getId)
                 .flatMap(passeportRepository::findFirstByDemandeurIdOrderByIdDesc);
+    }
+
+    public Optional<VisaTransformable> findVisaTransformableByDemandeId(Integer demandeId) {
+        return demandeRepository.findDetailedById(demandeId)
+                .map(Demande::getDemandeur)
+                .map(Demandeur::getId)
+                .flatMap(visaTransformableRepository::findFirstByDemandeurIdOrderByIdDesc);
     }
 
     public List<DemandeDossier> findByDemandeId(Integer demandeId) {
@@ -122,7 +134,12 @@ public class DemandeDossierService {
             String numeroPasseport,
             LocalDate dateDelivrance,
             LocalDate dateExpiration,
-            String paysDelivrance) {
+            String paysDelivrance,
+            String referenceVisaTransformable,
+            LocalDate dateArriveeMadagascar,
+            String lieuEntreeMadagascar,
+            LocalDate dateDonnationVisaTransformable,
+            LocalDate dateExpirationVisaTransformable) {
         Demande demande = demandeRepository.findDetailedById(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
 
@@ -154,15 +171,25 @@ public class DemandeDossierService {
             throw new IllegalArgumentException("Selection invalide de dossiers a fournir.");
         }
 
+        List<DemandeDossier> dossiersAjoutes = new java.util.ArrayList<>();
         for (DemandeDossier ligne : lignes) {
             if (!ligne.isEstFourni() && selectedIds.contains(ligne.getDossier().getId())) {
                 ligne.setEstFourni(true);
                 ligne.setCommentaire("Piece ajoutee via ecran dossiers en cours.");
+                dossiersAjoutes.add(ligne);
             }
         }
 
         if (!selectedIds.isEmpty()) {
             repository.saveAll(lignes);
+
+            for (DemandeDossier dossierAjoute : dossiersAjoutes) {
+                String nature = dossierAjoute.getDossier().isObligatoire() ? "obligatoire" : "optionnelle";
+                appendHistorique(
+                        demande,
+                        "Ajout piece " + nature + " : " + dossierAjoute.getDossier().getLibelle() + "."
+                );
+            }
         }
 
         if (updateInformations) {
@@ -180,8 +207,14 @@ public class DemandeDossierService {
                     numeroPasseport,
                     dateDelivrance,
                     dateExpiration,
-                    paysDelivrance
+                        paysDelivrance,
+                        referenceVisaTransformable,
+                        dateArriveeMadagascar,
+                        lieuEntreeMadagascar,
+                        dateDonnationVisaTransformable,
+                        dateExpirationVisaTransformable
             );
+                    appendHistorique(demande, "Informations demandeur/passeport/visa transformable mises a jour.");
         }
 
         boolean hasMissing = lignes.stream().anyMatch(ligne -> !ligne.isEstFourni());
@@ -204,6 +237,19 @@ public class DemandeDossierService {
             issueVisaIfNeeded(demande);
             demandeRepository.save(demande);
         }
+    }
+
+    private void appendHistorique(Demande demande, String commentaire) {
+        if (commentaire == null || commentaire.isBlank()) {
+            return;
+        }
+
+        HistoStatutDemande historique = new HistoStatutDemande();
+        historique.setDemande(demande);
+        historique.setStatut(demande.getStatut() != null ? demande.getStatut() : getOrCreateStatus("cree"));
+        historique.setDateChangement(LocalDateTime.now());
+        historique.setCommentaire(commentaire);
+        histoStatutDemandeRepository.save(historique);
     }
 
     private void issueVisaIfNeeded(Demande demande) {
@@ -267,7 +313,12 @@ public class DemandeDossierService {
             String numeroPasseport,
             LocalDate dateDelivrance,
             LocalDate dateExpiration,
-            String paysDelivrance) {
+            String paysDelivrance,
+            String referenceVisaTransformable,
+            LocalDate dateArriveeMadagascar,
+            String lieuEntreeMadagascar,
+            LocalDate dateDonnationVisaTransformable,
+            LocalDate dateExpirationVisaTransformable) {
         Demandeur demandeur = demande.getDemandeur();
         if (demandeur == null) {
             throw new IllegalArgumentException("Demandeur introuvable pour cette demande.");
@@ -305,6 +356,41 @@ public class DemandeDossierService {
             passeport.setDateExpiration(requireDate(dateExpiration, "Date d'expiration"));
             passeport.setPaysDelivrance(requireNonBlank(paysDelivrance, "Pays de delivrance"));
             passeportRepository.save(passeport);
+        }
+
+        boolean hasVisaTransformableInput = hasText(referenceVisaTransformable)
+            || dateArriveeMadagascar != null
+            || hasText(lieuEntreeMadagascar)
+            || dateDonnationVisaTransformable != null
+            || dateExpirationVisaTransformable != null;
+
+        if (hasVisaTransformableInput) {
+            LocalDate expirationVisaTransformable = requireDate(
+                    dateExpirationVisaTransformable,
+                    "Date d'expiration visa transformable"
+            );
+            validateVisaTransformableExpiration(expirationVisaTransformable);
+
+            VisaTransformable visaTransformable = visaTransformableRepository
+                    .findFirstByDemandeurIdOrderByIdDesc(demandeur.getId())
+                    .orElseGet(() -> {
+                        VisaTransformable nouveauVisaTransformable = new VisaTransformable();
+                        nouveauVisaTransformable.setDemandeur(demandeur);
+                        return nouveauVisaTransformable;
+                    });
+
+            visaTransformable.setReference(requireNonBlank(referenceVisaTransformable, "Reference visa transformable"));
+            visaTransformable.setDateArriveeMadagascar(requireDate(dateArriveeMadagascar, "Date d'arrivee a Madagascar"));
+            visaTransformable.setLieuEntreeMadagascar(requireNonBlank(lieuEntreeMadagascar, "Lieu d'entree a Madagascar"));
+            visaTransformable.setDateDonnation(requireDate(dateDonnationVisaTransformable, "Date de donnation visa transformable"));
+            visaTransformable.setDateExpiration(expirationVisaTransformable);
+            visaTransformableRepository.save(visaTransformable);
+        }
+    }
+
+    private void validateVisaTransformableExpiration(LocalDate dateExpirationVisaTransformable) {
+        if (dateExpirationVisaTransformable.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("La demande doit etre faite avant la fin de validite du visa transformable.");
         }
     }
 

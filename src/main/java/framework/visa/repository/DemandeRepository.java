@@ -20,7 +20,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 		)
 		order by d.dateDemande desc, d.id desc
 	""")
-	List<Demande> findDemandesen_courses();
+	List<Demande> findDemandescreees();
 
 	@Query("""
 		select d from Demande d

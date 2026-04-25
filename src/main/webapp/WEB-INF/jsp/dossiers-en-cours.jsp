@@ -135,7 +135,7 @@
     </table>
 
     <% if (demandesEnCours.isEmpty()) { %>
-    <p class="empty">Aucune demande en_course pour le moment.</p>
+    <p class="empty">Aucune demande creee pour le moment.</p>
     <% } %>
 </div>
 
