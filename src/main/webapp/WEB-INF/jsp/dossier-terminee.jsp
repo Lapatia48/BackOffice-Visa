@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.Map" %>
 <%@ page import="java.util.Collections" %>
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="framework.visa.entity.Demande" %>
@@ -15,6 +16,12 @@
     List<Demande> dossiersTerminees = (List<Demande>) request.getAttribute("dossiersTerminees");
     if (dossiersTerminees == null) {
         dossiersTerminees = Collections.emptyList();
+    }
+
+    Map<Integer, Map<String, String>> residentDetailsByDemande =
+            (Map<Integer, Map<String, String>>) request.getAttribute("residentDetailsByDemande");
+    if (residentDetailsByDemande == null) {
+        residentDetailsByDemande = Collections.emptyMap();
     }
 
     String message = (String) request.getAttribute("message");
@@ -76,11 +83,13 @@
             <th>Date debut visa</th>
             <th>Date fin visa</th>
             <th>Statut</th>
+            <th>Action</th>
         </tr>
         </thead>
         <tbody>
         <% for (Demande demande : dossiersTerminees) {
             Integer demandeId = demande.getId();
+            Map<String, String> residentDetails = residentDetailsByDemande.getOrDefault(demandeId, Collections.emptyMap());
 
             String nom = demande.getDemandeur() == null || demande.getDemandeur().getNom() == null
                 ? ""
@@ -127,6 +136,11 @@
             <td><%= dateDebutFormatted %></td>
             <td><%= dateFinFormatted %></td>
             <td><%= statutLibelle %></td>
+            <td>
+                <button type="button" class="btn-action btn-resident js-open-resident" data-demande-id="<%= demandeId %>">
+                    Voir carte resident
+                </button>
+            </td>
         </tr>
         <% } %>
         </tbody>
@@ -134,6 +148,63 @@
 
     <% if (dossiersTerminees.isEmpty()) { %>
     <p class="empty">Aucun dossier terminee nouveau titre pour le moment.</p>
+    <% } %>
+</div>
+
+<div id="residentModal" class="resident-modal" aria-hidden="true">
+    <div class="resident-modal-backdrop" data-close-modal="true"></div>
+    <div class="resident-modal-card" role="dialog" aria-modal="true" aria-labelledby="residentModalTitle">
+        <button type="button" class="resident-modal-close" id="closeResidentModal" aria-label="Fermer la fenetre">x</button>
+        <h2 id="residentModalTitle">Carte resident - Details</h2>
+        <div id="residentModalBody"></div>
+    </div>
+</div>
+
+<div id="residentDetailTemplates" class="resident-detail-templates">
+    <% for (Demande demande : dossiersTerminees) {
+        Integer demandeId = demande.getId();
+        Map<String, String> residentDetails = residentDetailsByDemande.getOrDefault(demandeId, Collections.emptyMap());
+    %>
+    <section id="resident-detail-template-<%= demandeId %>">
+        <div class="resident-card-header">
+            <p class="resident-chip">Demande #<%= demandeId %></p>
+            <h3><%= residentDetails.getOrDefault("demandeur", "Non renseignee") %></h3>
+        </div>
+        <div class="resident-grid">
+            <div class="resident-item">
+                <span>Reference carte</span>
+                <strong><%= residentDetails.getOrDefault("reference", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Categorie</span>
+                <strong><%= residentDetails.getOrDefault("categorie", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Type demande</span>
+                <strong><%= residentDetails.getOrDefault("typeDemande", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Statut dossier</span>
+                <strong><%= residentDetails.getOrDefault("statut", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Date debut</span>
+                <strong><%= residentDetails.getOrDefault("dateDebut", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Date fin</span>
+                <strong><%= residentDetails.getOrDefault("dateFin", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Duree de validite</span>
+                <strong><%= residentDetails.getOrDefault("duree", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Numero passeport</span>
+                <strong><%= residentDetails.getOrDefault("numeroPasseport", "Non renseignee") %></strong>
+            </div>
+        </div>
+    </section>
     <% } %>
 </div>
 
@@ -148,9 +219,32 @@
     const filterDateFin = document.getElementById('filterDateFin');
     const filterType = document.getElementById('filterType');
     const resultCount = document.getElementById('resultCount');
+    const openResidentButtons = document.querySelectorAll('.js-open-resident');
+    const residentModal = document.getElementById('residentModal');
+    const residentModalBody = document.getElementById('residentModalBody');
+    const closeResidentModal = document.getElementById('closeResidentModal');
 
     function normalize(value) {
         return (value || '').toString().trim().toLowerCase();
+    }
+
+    function openModalForDemande(demandeId) {
+        const template = document.getElementById('resident-detail-template-' + demandeId);
+        if (!template) {
+            return;
+        }
+
+        residentModalBody.innerHTML = template.innerHTML;
+        residentModal.classList.add('is-open');
+        residentModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeModal() {
+        residentModal.classList.remove('is-open');
+        residentModal.setAttribute('aria-hidden', 'true');
+        residentModalBody.innerHTML = '';
+        document.body.classList.remove('modal-open');
     }
 
     function applyFilters() {
@@ -190,6 +284,26 @@
 
     [filterId, filterNom, filterReference, filterDateDebut, filterDateFin, filterType].forEach((element) => {
         element.addEventListener('input', applyFilters);
+    });
+
+    openResidentButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            openModalForDemande(button.dataset.demandeId);
+        });
+    });
+
+    closeResidentModal.addEventListener('click', closeModal);
+
+    residentModal.addEventListener('click', (event) => {
+        if (event.target && event.target.getAttribute('data-close-modal') === 'true') {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && residentModal.classList.contains('is-open')) {
+            closeModal();
+        }
     });
 
     applyFilters();

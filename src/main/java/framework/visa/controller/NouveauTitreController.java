@@ -6,6 +6,7 @@ import framework.visa.entity.Dossier;
 import framework.visa.entity.Nationalite;
 import framework.visa.entity.SituationFamiliale;
 import framework.visa.entity.TypeDemande;
+import framework.visa.entity.Visa;
 import framework.visa.service.DemandeDossierService;
 import framework.visa.service.DemandeWorkflowService;
 import framework.visa.service.DossierService;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -29,6 +32,8 @@ import java.util.Set;
 
 @Controller
 public class NouveauTitreController {
+    private static final DateTimeFormatter RESIDENT_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     private final DossierService dossierService;
     private final DemandeWorkflowService demandeWorkflowService;
     private final DemandeDossierService demandeDossierService;
@@ -173,8 +178,82 @@ public class NouveauTitreController {
     @GetMapping("/dossier-terminee")
     public String dossierTerminee(Model model) {
         List<Demande> dossiersTerminees = demandeDossierService.findDossiersTermineesNouveauTitre();
+        model.addAttribute("residentDetailsByDemande", buildResidentDetailsByDemande(dossiersTerminees));
         model.addAttribute("dossiersTerminees", dossiersTerminees);
         return "dossier-terminee";
+    }
+
+    private Map<Integer, Map<String, String>> buildResidentDetailsByDemande(List<Demande> dossiersTerminees) {
+        Map<Integer, Map<String, String>> detailsByDemande = new HashMap<>();
+
+        for (Demande demande : dossiersTerminees) {
+            if (demande == null || demande.getId() == null) {
+                continue;
+            }
+
+            Visa visa = demande.getVisa();
+            Map<String, String> details = new LinkedHashMap<>();
+            details.put("demandeur", buildDemandeurName(demande));
+            details.put("reference", resolveText(visa == null ? null : visa.getReference()));
+            details.put("categorie", resolveText(
+                    visa == null || visa.getCategorieVisa() == null
+                            ? null
+                            : visa.getCategorieVisa().getLibelle()
+            ));
+            details.put("typeDemande", resolveText(
+                    demande.getTypeDemande() == null
+                            ? null
+                            : demande.getTypeDemande().getLibelle()
+            ));
+            details.put("statut", resolveText(
+                    demande.getStatut() == null
+                            ? null
+                            : demande.getStatut().getLibelle()
+            ));
+            details.put("dateDebut", formatDate(visa == null ? null : visa.getDateDebut()));
+            details.put("dateFin", formatDate(visa == null ? null : visa.getDateFin()));
+            details.put("duree", formatDuree(visa == null ? null : visa.getDateDebut(), visa == null ? null : visa.getDateFin()));
+            details.put("numeroPasseport", resolveText(
+                    visa == null || visa.getPasseport() == null
+                            ? null
+                            : visa.getPasseport().getNumeroPasseport()
+            ));
+
+            detailsByDemande.put(demande.getId(), details);
+        }
+
+        return detailsByDemande;
+    }
+
+    private String buildDemandeurName(Demande demande) {
+        String nom = demande.getDemandeur() == null ? null : demande.getDemandeur().getNom();
+        String prenom = demande.getDemandeur() == null ? null : demande.getDemandeur().getPrenom();
+
+        String fullName = ((nom == null ? "" : nom.trim()) + " " + (prenom == null ? "" : prenom.trim())).trim();
+        return fullName.isEmpty() ? "Non renseignee" : fullName;
+    }
+
+    private String formatDate(LocalDate date) {
+        return date == null ? "Non renseignee" : date.format(RESIDENT_DATE_FORMATTER);
+    }
+
+    private String formatDuree(LocalDate dateDebut, LocalDate dateFin) {
+        if (dateDebut == null || dateFin == null) {
+            return "Non renseignee";
+        }
+        if (dateFin.isBefore(dateDebut)) {
+            return "Incoherente";
+        }
+
+        long totalJours = ChronoUnit.DAYS.between(dateDebut, dateFin) + 1;
+        return totalJours + " jour(s)";
+    }
+
+    private String resolveText(String value) {
+        if (value == null || value.isBlank()) {
+            return "Non renseignee";
+        }
+        return value.trim();
     }
 
     @GetMapping("/dossiers-en-cours/ajout")
