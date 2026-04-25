@@ -22,6 +22,8 @@ public class DemandeWorkflowService {
     private final DossierTypeVisaRepository dossierTypeVisaRepository;
     private final DemandeDossierRepository demandeDossierRepository;
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
+        private final SituationFamilialeRepository situationFamilialeRepository;
+        private final NationaliteRepository nationaliteRepository;
 
     public DemandeWorkflowService(
             DemandeurRepository demandeurRepository,
@@ -31,7 +33,9 @@ public class DemandeWorkflowService {
             StatutDemandeRepository statutDemandeRepository,
             DossierTypeVisaRepository dossierTypeVisaRepository,
             DemandeDossierRepository demandeDossierRepository,
-            HistoStatutDemandeRepository histoStatutDemandeRepository) {
+                        HistoStatutDemandeRepository histoStatutDemandeRepository,
+                        SituationFamilialeRepository situationFamilialeRepository,
+                        NationaliteRepository nationaliteRepository) {
         this.demandeurRepository = demandeurRepository;
         this.passeportRepository = passeportRepository;
         this.demandeRepository = demandeRepository;
@@ -40,6 +44,8 @@ public class DemandeWorkflowService {
         this.dossierTypeVisaRepository = dossierTypeVisaRepository;
         this.demandeDossierRepository = demandeDossierRepository;
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
+                this.situationFamilialeRepository = situationFamilialeRepository;
+                this.nationaliteRepository = nationaliteRepository;
     }
 
     @Transactional
@@ -48,6 +54,8 @@ public class DemandeWorkflowService {
             String prenom,
             LocalDate dateNaissance,
             String lieuNaissance,
+            Integer situationFamilialeId,
+            Integer nationaliteId,
             String telephone,
             String email,
             String adresse,
@@ -86,10 +94,17 @@ public class DemandeWorkflowService {
                 }
 
                 Demandeur demandeur = new Demandeur();
+                SituationFamiliale situationFamiliale = situationFamilialeRepository.findById(situationFamilialeId)
+                        .orElseThrow(() -> new IllegalArgumentException("Situation familiale introuvable."));
+                Nationalite nationalite = nationaliteRepository.findById(nationaliteId)
+                        .orElseThrow(() -> new IllegalArgumentException("Nationalite introuvable."));
+
                 demandeur.setNom(nom);
                 demandeur.setPrenom(prenom);
                 demandeur.setDateNaissance(dateNaissance);
                 demandeur.setLieuNaissance(lieuNaissance);
+                demandeur.setSituationFamiliale(situationFamiliale);
+                demandeur.setNationalite(nationalite);
                 demandeur.setTelephone(telephone);
                 demandeur.setEmail(email);
                 demandeur.setAdresse(adresse);

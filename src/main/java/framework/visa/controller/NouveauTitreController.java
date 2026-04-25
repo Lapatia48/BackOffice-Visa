@@ -3,10 +3,14 @@ package framework.visa.controller;
 import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Dossier;
+import framework.visa.entity.Nationalite;
+import framework.visa.entity.SituationFamiliale;
 import framework.visa.entity.TypeDemande;
 import framework.visa.service.DemandeDossierService;
 import framework.visa.service.DemandeWorkflowService;
 import framework.visa.service.DossierService;
+import framework.visa.service.NationaliteService;
+import framework.visa.service.SituationFamilialeService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,14 +32,20 @@ public class NouveauTitreController {
     private final DossierService dossierService;
     private final DemandeWorkflowService demandeWorkflowService;
     private final DemandeDossierService demandeDossierService;
+    private final SituationFamilialeService situationFamilialeService;
+    private final NationaliteService nationaliteService;
 
     public NouveauTitreController(
             DossierService dossierService,
             DemandeWorkflowService demandeWorkflowService,
-            DemandeDossierService demandeDossierService) {
+            DemandeDossierService demandeDossierService,
+            SituationFamilialeService situationFamilialeService,
+            NationaliteService nationaliteService) {
         this.dossierService = dossierService;
         this.demandeWorkflowService = demandeWorkflowService;
         this.demandeDossierService = demandeDossierService;
+        this.situationFamilialeService = situationFamilialeService;
+        this.nationaliteService = nationaliteService;
     }
 
     @GetMapping("/")
@@ -47,6 +57,8 @@ public class NouveauTitreController {
     public String nouveauTitre(Model model) {
         List<TypeDemande> types = dossierService.findAvailableTypes();
         List<Dossier> commonDossiers = dossierService.findCommonDossiers();
+        List<SituationFamiliale> situationsFamiliales = situationFamilialeService.findAll();
+        List<Nationalite> nationalites = nationaliteService.findAll();
 
         Map<Integer, List<Dossier>> typedDossiers = new LinkedHashMap<>();
         for (TypeDemande type : types) {
@@ -56,6 +68,8 @@ public class NouveauTitreController {
         model.addAttribute("types", types);
         model.addAttribute("commonDossiers", commonDossiers);
         model.addAttribute("typedDossiers", typedDossiers);
+        model.addAttribute("situationsFamiliales", situationsFamiliales);
+        model.addAttribute("nationalites", nationalites);
         return "nouveau-titre";
     }
 
@@ -65,6 +79,8 @@ public class NouveauTitreController {
             @RequestParam String prenom,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
             @RequestParam String lieuNaissance,
+            @RequestParam Integer situationFamilialeId,
+            @RequestParam Integer nationaliteId,
             @RequestParam String telephone,
             @RequestParam String email,
             @RequestParam String adresse,
@@ -100,6 +116,8 @@ public class NouveauTitreController {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    situationFamilialeId,
+                    nationaliteId,
                     telephone,
                     email,
                     adresse,
@@ -177,6 +195,8 @@ public class NouveauTitreController {
             model.addAttribute("demande", demande);
             model.addAttribute("passeport", demandeDossierService.findPasseportByDemandeId(demandeId).orElse(null));
             model.addAttribute("dossiersRestants", dossiersRestants);
+            model.addAttribute("situationsFamiliales", situationFamilialeService.findAll());
+            model.addAttribute("nationalites", nationaliteService.findAll());
             return "ajout-dossier";
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
@@ -193,6 +213,8 @@ public class NouveauTitreController {
             @RequestParam(required = false) String prenom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
             @RequestParam(required = false) String lieuNaissance,
+            @RequestParam(required = false) Integer situationFamilialeId,
+            @RequestParam(required = false) Integer nationaliteId,
             @RequestParam(required = false) String telephone,
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String adresse,
@@ -210,6 +232,8 @@ public class NouveauTitreController {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    situationFamilialeId,
+                    nationaliteId,
                     telephone,
                     email,
                     adresse,

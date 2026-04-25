@@ -2,6 +2,8 @@
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.Collections" %>
+<%@ page import="framework.visa.entity.Nationalite" %>
+<%@ page import="framework.visa.entity.SituationFamiliale" %>
 <%@ page import="framework.visa.entity.TypeDemande" %>
 <%@ page import="framework.visa.entity.Dossier" %>
 <!DOCTYPE html>
@@ -27,6 +29,16 @@
     Map<Integer, List<Dossier>> typedDossiers = (Map<Integer, List<Dossier>>) request.getAttribute("typedDossiers");
     if (typedDossiers == null) {
         typedDossiers = Collections.emptyMap();
+    }
+
+    List<SituationFamiliale> situationsFamiliales = (List<SituationFamiliale>) request.getAttribute("situationsFamiliales");
+    if (situationsFamiliales == null) {
+        situationsFamiliales = Collections.emptyList();
+    }
+
+    List<Nationalite> nationalites = (List<Nationalite>) request.getAttribute("nationalites");
+    if (nationalites == null) {
+        nationalites = Collections.emptyList();
     }
 
     String error = (String) request.getAttribute("error");
@@ -119,6 +131,22 @@
             </label>
             <label>Lieu de naissance
                 <input type="text" name="lieuNaissance" required>
+            </label>
+            <label>Situation familiale
+                <select name="situationFamilialeId" required>
+                    <option value="">-- choisir --</option>
+                    <% for (SituationFamiliale situation : situationsFamiliales) { %>
+                        <option value="<%= situation.getId() %>"><%= situation.getLibelle() %></option>
+                    <% } %>
+                </select>
+            </label>
+            <label>Nationalite
+                <select name="nationaliteId" required>
+                    <option value="">-- choisir --</option>
+                    <% for (Nationalite nationalite : nationalites) { %>
+                        <option value="<%= nationalite.getId() %>"><%= nationalite.getLibelle() %></option>
+                    <% } %>
+                </select>
             </label>
             <label>Telephone
                 <input type="text" name="telephone" required>

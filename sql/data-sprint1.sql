@@ -40,6 +40,42 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'terminee'
 );
 
+INSERT INTO Situation_familiale (libelle)
+SELECT 'celibataire'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Situation_familiale WHERE lower(libelle) = 'celibataire'
+);
+
+INSERT INTO Situation_familiale (libelle)
+SELECT 'marie'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Situation_familiale WHERE lower(libelle) = 'marie'
+);
+
+INSERT INTO Situation_familiale (libelle)
+SELECT 'divorce'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Situation_familiale WHERE lower(libelle) = 'divorce'
+);
+
+INSERT INTO Nationalite (libelle)
+SELECT 'malagasy'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Nationalite WHERE lower(libelle) = 'malagasy'
+);
+
+INSERT INTO Nationalite (libelle)
+SELECT 'francaise'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Nationalite WHERE lower(libelle) = 'francaise'
+);
+
+INSERT INTO Nationalite (libelle)
+SELECT 'indienne'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Nationalite WHERE lower(libelle) = 'indienne'
+);
+
 INSERT INTO Dossiers (libelle, obligatoire)
 SELECT '02 photos d''identite', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM Dossiers WHERE libelle = '02 photos d''identite');

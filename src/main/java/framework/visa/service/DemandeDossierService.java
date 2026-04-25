@@ -14,7 +14,9 @@ import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
 import framework.visa.repository.DemandeurRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
+import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
+import framework.visa.repository.SituationFamilialeRepository;
 import framework.visa.repository.StatutDemandeRepository;
 import framework.visa.repository.VisaRepository;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,8 @@ public class DemandeDossierService {
     private final DemandeRepository demandeRepository;
     private final DemandeurRepository demandeurRepository;
     private final PasseportRepository passeportRepository;
+    private final SituationFamilialeRepository situationFamilialeRepository;
+    private final NationaliteRepository nationaliteRepository;
     private final StatutDemandeRepository statutDemandeRepository;
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
     private final VisaRepository visaRepository;
@@ -50,6 +54,8 @@ public class DemandeDossierService {
             DemandeRepository demandeRepository,
             DemandeurRepository demandeurRepository,
             PasseportRepository passeportRepository,
+            SituationFamilialeRepository situationFamilialeRepository,
+            NationaliteRepository nationaliteRepository,
             StatutDemandeRepository statutDemandeRepository,
             HistoStatutDemandeRepository histoStatutDemandeRepository,
             VisaRepository visaRepository,
@@ -59,6 +65,8 @@ public class DemandeDossierService {
         this.demandeRepository = demandeRepository;
         this.demandeurRepository = demandeurRepository;
         this.passeportRepository = passeportRepository;
+        this.situationFamilialeRepository = situationFamilialeRepository;
+        this.nationaliteRepository = nationaliteRepository;
         this.statutDemandeRepository = statutDemandeRepository;
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
         this.visaRepository = visaRepository;
@@ -106,6 +114,8 @@ public class DemandeDossierService {
             String prenom,
             LocalDate dateNaissance,
             String lieuNaissance,
+            Integer situationFamilialeId,
+            Integer nationaliteId,
             String telephone,
             String email,
             String adresse,
@@ -162,6 +172,8 @@ public class DemandeDossierService {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    situationFamilialeId,
+                    nationaliteId,
                     telephone,
                     email,
                     adresse,
@@ -247,6 +259,8 @@ public class DemandeDossierService {
             String prenom,
             LocalDate dateNaissance,
             String lieuNaissance,
+            Integer situationFamilialeId,
+            Integer nationaliteId,
             String telephone,
             String email,
             String adresse,
@@ -263,6 +277,10 @@ public class DemandeDossierService {
         demandeur.setPrenom(requireNonBlank(prenom, "Prenom"));
         demandeur.setDateNaissance(requireDate(dateNaissance, "Date de naissance"));
         demandeur.setLieuNaissance(requireNonBlank(lieuNaissance, "Lieu de naissance"));
+        demandeur.setSituationFamiliale(situationFamilialeRepository.findById(requireId(situationFamilialeId, "Situation familiale"))
+            .orElseThrow(() -> new IllegalArgumentException("Situation familiale introuvable.")));
+        demandeur.setNationalite(nationaliteRepository.findById(requireId(nationaliteId, "Nationalite"))
+            .orElseThrow(() -> new IllegalArgumentException("Nationalite introuvable.")));
         demandeur.setTelephone(requireNonBlank(telephone, "Telephone"));
         demandeur.setEmail(requireNonBlank(email, "Email"));
         demandeur.setAdresse(requireNonBlank(adresse, "Adresse"));
@@ -298,6 +316,13 @@ public class DemandeDossierService {
     }
 
     private LocalDate requireDate(LocalDate value, String label) {
+        if (value == null) {
+            throw new IllegalArgumentException(label + " est obligatoire.");
+        }
+        return value;
+    }
+
+    private Integer requireId(Integer value, String label) {
         if (value == null) {
             throw new IllegalArgumentException(label + " est obligatoire.");
         }

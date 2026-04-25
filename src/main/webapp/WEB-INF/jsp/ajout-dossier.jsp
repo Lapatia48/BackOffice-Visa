@@ -4,7 +4,9 @@
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="framework.visa.entity.Demande" %>
 <%@ page import="framework.visa.entity.DemandeDossier" %>
+<%@ page import="framework.visa.entity.Nationalite" %>
 <%@ page import="framework.visa.entity.Passeport" %>
+<%@ page import="framework.visa.entity.SituationFamiliale" %>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -20,6 +22,16 @@
     List<DemandeDossier> dossiersRestants = (List<DemandeDossier>) request.getAttribute("dossiersRestants");
     if (dossiersRestants == null) {
         dossiersRestants = Collections.emptyList();
+    }
+
+    List<SituationFamiliale> situationsFamiliales = (List<SituationFamiliale>) request.getAttribute("situationsFamiliales");
+    if (situationsFamiliales == null) {
+        situationsFamiliales = Collections.emptyList();
+    }
+
+    List<Nationalite> nationalites = (List<Nationalite>) request.getAttribute("nationalites");
+    if (nationalites == null) {
+        nationalites = Collections.emptyList();
     }
 
     String error = (String) request.getAttribute("error");
@@ -109,6 +121,38 @@
             <label>Lieu de naissance
                 <input class="editable-info" type="text" name="lieuNaissance" value="<%= demande.getDemandeur() == null ? "" : demande.getDemandeur().getLieuNaissance() %>" readonly>
             </label>
+            <label>Situation familiale
+                <select class="editable-info" name="situationFamilialeId" disabled required>
+                    <option value="">-- choisir --</option>
+                    <% for (SituationFamiliale situation : situationsFamiliales) { %>
+                        <option
+                            value="<%= situation.getId() %>"
+                            <%= demande.getDemandeur() != null
+                                && demande.getDemandeur().getSituationFamiliale() != null
+                                && situation.getId().equals(demande.getDemandeur().getSituationFamiliale().getId())
+                                ? "selected"
+                                : "" %>>
+                            <%= situation.getLibelle() %>
+                        </option>
+                    <% } %>
+                </select>
+            </label>
+            <label>Nationalite
+                <select class="editable-info" name="nationaliteId" disabled required>
+                    <option value="">-- choisir --</option>
+                    <% for (Nationalite nationalite : nationalites) { %>
+                        <option
+                            value="<%= nationalite.getId() %>"
+                            <%= demande.getDemandeur() != null
+                                && demande.getDemandeur().getNationalite() != null
+                                && nationalite.getId().equals(demande.getDemandeur().getNationalite().getId())
+                                ? "selected"
+                                : "" %>>
+                            <%= nationalite.getLibelle() %>
+                        </option>
+                    <% } %>
+                </select>
+            </label>
             <label>Telephone
                 <input class="editable-info" type="text" name="telephone" value="<%= demande.getDemandeur() == null ? "" : demande.getDemandeur().getTelephone() %>" readonly>
             </label>
@@ -151,11 +195,20 @@
         editInformationsInput.value = enabled ? 'true' : 'false';
 
         editableInputs.forEach((input) => {
+            const isSelect = input.tagName === 'SELECT';
             if (enabled) {
-                input.removeAttribute('readonly');
+                if (isSelect) {
+                    input.removeAttribute('disabled');
+                } else {
+                    input.removeAttribute('readonly');
+                }
                 input.classList.add('editable-active');
             } else {
-                input.setAttribute('readonly', 'readonly');
+                if (isSelect) {
+                    input.setAttribute('disabled', 'disabled');
+                } else {
+                    input.setAttribute('readonly', 'readonly');
+                }
                 input.classList.remove('editable-active');
             }
         });
