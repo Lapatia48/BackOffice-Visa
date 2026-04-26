@@ -146,6 +146,20 @@ tbody tr:hover {
     box-shadow: 0 10px 20px rgba(40, 79, 76, 0.3);
 }
 
+.btn-history {
+    border: 0;
+    cursor: pointer;
+    margin-left: 0.35rem;
+    background: linear-gradient(135deg, #4f4a7f 0%, #3f3b66 100%);
+    box-shadow: 0 8px 18px rgba(63, 59, 102, 0.24);
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.btn-history:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(63, 59, 102, 0.3);
+}
+
 .resident-modal {
     position: fixed;
     inset: 0;
@@ -250,6 +264,38 @@ tbody tr:hover {
 .resident-item strong {
     font-size: 0.94rem;
     color: #2f2b25;
+}
+
+.history-list {
+    display: grid;
+    gap: 0.7rem;
+}
+
+.history-item {
+    border: 1px solid #e7e2d3;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.75rem;
+}
+
+.history-item p {
+    margin: 0;
+}
+
+.history-date {
+    color: #2f2b25;
+    margin-bottom: 0.25rem;
+}
+
+.history-status {
+    color: #4c4965;
+    font-size: 0.88rem;
+    margin-bottom: 0.35rem;
+}
+
+.history-comment {
+    color: #6a6760;
+    font-size: 0.88rem;
 }
 
 body.modal-open {
