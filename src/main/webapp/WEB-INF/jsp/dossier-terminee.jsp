@@ -24,6 +24,12 @@
         residentDetailsByDemande = Collections.emptyMap();
     }
 
+    Map<Integer, List<Map<String, String>>> historiquesByDemande =
+            (Map<Integer, List<Map<String, String>>>) request.getAttribute("historiquesByDemande");
+    if (historiquesByDemande == null) {
+        historiquesByDemande = Collections.emptyMap();
+    }
+
     String message = (String) request.getAttribute("message");
     String error = (String) request.getAttribute("error");
 
@@ -140,6 +146,9 @@
                 <button type="button" class="btn-action btn-resident js-open-resident" data-demande-id="<%= demandeId %>">
                     Voir carte resident
                 </button>
+                <button type="button" class="btn-action btn-history js-open-history" data-demande-id="<%= demandeId %>">
+                    Voir historique demande
+                </button>
             </td>
         </tr>
         <% } %>
@@ -160,6 +169,15 @@
     </div>
 </div>
 
+<div id="historyModal" class="resident-modal" aria-hidden="true">
+    <div class="resident-modal-backdrop" data-close-history-modal="true"></div>
+    <div class="resident-modal-card" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+        <button type="button" class="resident-modal-close" id="closeHistoryModal" aria-label="Fermer la fenetre">x</button>
+        <h2 id="historyModalTitle">Historique demande</h2>
+        <div id="historyModalBody"></div>
+    </div>
+</div>
+
 <div id="residentDetailTemplates" class="resident-detail-templates">
     <% for (Demande demande : dossiersTerminees) {
         Integer demandeId = demande.getId();
@@ -172,8 +190,12 @@
         </div>
         <div class="resident-grid">
             <div class="resident-item">
-                <span>Reference carte</span>
-                <strong><%= residentDetails.getOrDefault("reference", "Non renseignee") %></strong>
+                <span>Numero carte resident</span>
+                <strong><%= residentDetails.getOrDefault("numeroCarteResident", "Non renseignee") %></strong>
+            </div>
+            <div class="resident-item">
+                <span>Reference visa</span>
+                <strong><%= residentDetails.getOrDefault("referenceVisa", "Non renseignee") %></strong>
             </div>
             <div class="resident-item">
                 <span>Categorie</span>
@@ -188,12 +210,12 @@
                 <strong><%= residentDetails.getOrDefault("statut", "Non renseignee") %></strong>
             </div>
             <div class="resident-item">
-                <span>Date debut</span>
-                <strong><%= residentDetails.getOrDefault("dateDebut", "Non renseignee") %></strong>
+                <span>Date donnation</span>
+                <strong><%= residentDetails.getOrDefault("dateDonnation", "Non renseignee") %></strong>
             </div>
             <div class="resident-item">
-                <span>Date fin</span>
-                <strong><%= residentDetails.getOrDefault("dateFin", "Non renseignee") %></strong>
+                <span>Date expiration</span>
+                <strong><%= residentDetails.getOrDefault("dateExpiration", "Non renseignee") %></strong>
             </div>
             <div class="resident-item">
                 <span>Duree de validite</span>
@@ -204,6 +226,36 @@
                 <strong><%= residentDetails.getOrDefault("numeroPasseport", "Non renseignee") %></strong>
             </div>
         </div>
+    </section>
+    <% } %>
+</div>
+
+<div id="historyDetailTemplates" class="resident-detail-templates">
+    <% for (Demande demande : dossiersTerminees) {
+        Integer demandeId = demande.getId();
+        List<Map<String, String>> historiques = historiquesByDemande.getOrDefault(demandeId, Collections.emptyList());
+    %>
+    <section id="history-detail-template-<%= demandeId %>">
+        <div class="resident-card-header">
+            <p class="resident-chip">Demande #<%= demandeId %></p>
+            <h3>Historique des mouvements</h3>
+        </div>
+        <% if (historiques.isEmpty()) { %>
+        <p class="empty">Aucun mouvement disponible.</p>
+        <% } else { %>
+        <div class="history-list">
+            <% for (Map<String, String> historique : historiques) { %>
+            <article class="history-item">
+                <p class="history-date"><strong><%= historique.getOrDefault("date", "Non renseignee") %></strong></p>
+                <p class="history-status">
+                    Statut #<%= historique.getOrDefault("statutId", "-") %> -
+                    <%= historique.getOrDefault("statutLabel", "Statut non renseigne") %>
+                </p>
+                <p class="history-comment"><%= historique.getOrDefault("commentaire", "Non renseignee") %></p>
+            </article>
+            <% } %>
+        </div>
+        <% } %>
     </section>
     <% } %>
 </div>
@@ -223,6 +275,10 @@
     const residentModal = document.getElementById('residentModal');
     const residentModalBody = document.getElementById('residentModalBody');
     const closeResidentModal = document.getElementById('closeResidentModal');
+    const openHistoryButtons = document.querySelectorAll('.js-open-history');
+    const historyModal = document.getElementById('historyModal');
+    const historyModalBody = document.getElementById('historyModalBody');
+    const closeHistoryModal = document.getElementById('closeHistoryModal');
 
     function normalize(value) {
         return (value || '').toString().trim().toLowerCase();
@@ -244,6 +300,25 @@
         residentModal.classList.remove('is-open');
         residentModal.setAttribute('aria-hidden', 'true');
         residentModalBody.innerHTML = '';
+        document.body.classList.remove('modal-open');
+    }
+
+    function openHistoryModalForDemande(demandeId) {
+        const template = document.getElementById('history-detail-template-' + demandeId);
+        if (!template) {
+            return;
+        }
+
+        historyModalBody.innerHTML = template.innerHTML;
+        historyModal.classList.add('is-open');
+        historyModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+    }
+
+    function closeHistoryModalView() {
+        historyModal.classList.remove('is-open');
+        historyModal.setAttribute('aria-hidden', 'true');
+        historyModalBody.innerHTML = '';
         document.body.classList.remove('modal-open');
     }
 
@@ -292,6 +367,12 @@
         });
     });
 
+    openHistoryButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            openHistoryModalForDemande(button.dataset.demandeId);
+        });
+    });
+
     closeResidentModal.addEventListener('click', closeModal);
 
     residentModal.addEventListener('click', (event) => {
@@ -300,9 +381,20 @@
         }
     });
 
+    closeHistoryModal.addEventListener('click', closeHistoryModalView);
+
+    historyModal.addEventListener('click', (event) => {
+        if (event.target && event.target.getAttribute('data-close-history-modal') === 'true') {
+            closeHistoryModalView();
+        }
+    });
+
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && residentModal.classList.contains('is-open')) {
             closeModal();
+        }
+        if (event.key === 'Escape' && historyModal.classList.contains('is-open')) {
+            closeHistoryModalView();
         }
     });
 
