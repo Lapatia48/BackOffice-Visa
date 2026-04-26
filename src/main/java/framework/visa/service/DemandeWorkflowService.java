@@ -8,6 +8,7 @@ import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Demandeur;
 import framework.visa.entity.DemandeurVisaCarteResident;
 import framework.visa.entity.Dossier;
+import framework.visa.entity.Etat;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Nationalite;
 import framework.visa.entity.Passeport;
@@ -23,6 +24,7 @@ import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeurRepository;
 import framework.visa.repository.DemandeurVisaCarteResidentRepository;
 import framework.visa.repository.DossierTypeVisaRepository;
+import framework.visa.repository.EtatRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
@@ -48,6 +50,7 @@ public class DemandeWorkflowService {
         private static final String STATUS_CREE = "cree";
         private static final String STATUS_TERMINEE = "terminee";
         private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
+        private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
         private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
         private static final String CARTE_RESIDENT_PREFIX = "CR";
 
@@ -57,6 +60,7 @@ public class DemandeWorkflowService {
         private final TypeDemandeRepository typeDemandeRepository;
         private final StatutDemandeRepository statutDemandeRepository;
         private final DossierTypeVisaRepository dossierTypeVisaRepository;
+        private final EtatRepository etatRepository;
         private final DemandeDossierRepository demandeDossierRepository;
         private final HistoStatutDemandeRepository histoStatutDemandeRepository;
         private final VisaTransformableRepository visaTransformableRepository;
@@ -75,6 +79,7 @@ public class DemandeWorkflowService {
                         TypeDemandeRepository typeDemandeRepository,
                         StatutDemandeRepository statutDemandeRepository,
                         DossierTypeVisaRepository dossierTypeVisaRepository,
+                        EtatRepository etatRepository,
                         DemandeDossierRepository demandeDossierRepository,
                         HistoStatutDemandeRepository histoStatutDemandeRepository,
                         VisaTransformableRepository visaTransformableRepository,
@@ -91,6 +96,7 @@ public class DemandeWorkflowService {
                 this.typeDemandeRepository = typeDemandeRepository;
                 this.statutDemandeRepository = statutDemandeRepository;
                 this.dossierTypeVisaRepository = dossierTypeVisaRepository;
+                this.etatRepository = etatRepository;
                 this.demandeDossierRepository = demandeDossierRepository;
                 this.histoStatutDemandeRepository = histoStatutDemandeRepository;
                 this.visaTransformableRepository = visaTransformableRepository;
@@ -282,6 +288,7 @@ public class DemandeWorkflowService {
                                 });
         }
 
+        //create createCarteResidentIfNeeded
         private CarteResident createCarteResidentForVisa(Demandeur demandeur, Visa visa) {
                 Optional<DemandeurVisaCarteResident> existingLink = demandeurVisaCarteResidentRepository
                                 .findFirstWithDetailsByVisaId(visa.getId());
@@ -293,6 +300,8 @@ public class DemandeWorkflowService {
                 carteResident.setNumero(generateNextCarteResidentNumero());
                 carteResident.setDateDonnation(visa.getDateDebut() == null ? LocalDate.now() : visa.getDateDebut());
                 carteResident.setDateExpiration(visa.getDateFin() == null ? LocalDate.now() : visa.getDateFin());
+                carteResident.setDemandeur(demandeur);
+                carteResident.setEtat(resolveEtat(ETAT_NOUVEAU_TITRE));
                 carteResident = carteResidentRepository.save(carteResident);
 
                 DemandeurVisaCarteResident link = new DemandeurVisaCarteResident();
@@ -302,6 +311,15 @@ public class DemandeWorkflowService {
                 demandeurVisaCarteResidentRepository.save(link);
 
                 return carteResident;
+        }
+
+        private Etat resolveEtat(String libelle) {
+                return etatRepository.findFirstByLibelleIgnoreCase(libelle)
+                                .orElseGet(() -> {
+                                        Etat etat = new Etat();
+                                        etat.setLibelle(libelle);
+                                        return etatRepository.save(etat);
+                                });
         }
 
         private String generateNextCarteResidentNumero() {

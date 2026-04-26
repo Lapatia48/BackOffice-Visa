@@ -1,19 +1,13 @@
 INSERT INTO Categorie_visa (libelle)
-SELECT 'nouveau_titre'
+SELECT 'travailleur'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'nouveau_titre'
+	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'travailleur'
 );
 
 INSERT INTO Categorie_visa (libelle)
-SELECT 'duplicata'
+SELECT 'investisseur'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'duplicata'
-);
-
-INSERT INTO Categorie_visa (libelle)
-SELECT 'transfert_visa'
-WHERE NOT EXISTS (
-	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'transfert_visa'
+	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'investisseur'
 );
 
 INSERT INTO Type_demande (libelle)
@@ -175,3 +169,4 @@ AND NOT EXISTS (
 	WHERE dtv.id_dossier = d.id
 	  AND dtv.id_type_visa = td.id
 );
+

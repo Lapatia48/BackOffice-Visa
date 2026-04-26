@@ -436,12 +436,17 @@ public class NouveauTitreController {
     }
 
     @GetMapping("/duplicata")
-    public String duplicata() {
+    public String duplicata(Model model) {
+        List<Nationalite> nationalites = nationaliteService.findAll();
+        model.addAttribute("nationalites", nationalites);
+
         return "duplicata";
     }
 
     @GetMapping("/transfert-visa")
-    public String transfertVisa() {
+    public String transfertVisa(Model model) {
+        List<Nationalite> nationalites = nationaliteService.findAll();
+        model.addAttribute("nationalites", nationalites);
         return "transfert-visa";
     }
 

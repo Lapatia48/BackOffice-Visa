@@ -27,9 +27,23 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 		join fetch d.demandeur demandeur
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
+		left join fetch d.visa visa
+		left join fetch visa.categorieVisa categorie
 		where d.id = :demandeId
 	""")
 	Optional<Demande> findDetailedById(@Param("demandeId") Integer demandeId);
+
+	@Query("""
+		select d from Demande d
+		join fetch d.demandeur demandeur
+		join fetch d.typeDemande typeDemande
+		join fetch d.statut statut
+		left join fetch d.visa visa
+		left join fetch visa.categorieVisa categorie
+		where demandeur.id = :demandeurId
+		order by d.id desc
+	""")
+	List<Demande> findDetailedByDemandeurIdOrderByIdDesc(@Param("demandeurId") Integer demandeurId);
 
 	@Query("""
 		select d from Demande d

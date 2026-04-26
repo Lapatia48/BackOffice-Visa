@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 @Table(
     name = "Demandeur_visa_carte_resident",
     uniqueConstraints = {
-        @UniqueConstraint(name = "ux_demandeur_visa_carte_resident_visa", columnNames = "id_visa"),
         @UniqueConstraint(name = "ux_demandeur_visa_carte_resident_carte", columnNames = "id_carte_resident")
     }
 )
