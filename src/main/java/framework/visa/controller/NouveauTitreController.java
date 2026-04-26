@@ -1,10 +1,14 @@
 package framework.visa.controller;
 
+import framework.visa.entity.CarteResident;
 import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
+import framework.visa.entity.DemandeurVisaCarteResident;
 import framework.visa.entity.Dossier;
+import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Nationalite;
 import framework.visa.entity.SituationFamiliale;
+import framework.visa.entity.StatutDemande;
 import framework.visa.entity.TypeDemande;
 import framework.visa.entity.Visa;
 import framework.visa.service.DemandeDossierService;
@@ -188,12 +192,26 @@ public class NouveauTitreController {
     @GetMapping("/dossier-terminee")
     public String dossierTerminee(Model model) {
         List<Demande> dossiersTerminees = demandeDossierService.findDossiersTermineesNouveauTitre();
-        model.addAttribute("residentDetailsByDemande", buildResidentDetailsByDemande(dossiersTerminees));
+        List<Integer> demandeurIds = dossiersTerminees.stream()
+            .map(Demande::getDemandeur)
+            .filter(java.util.Objects::nonNull)
+            .map(demandeur -> demandeur.getId())
+            .filter(java.util.Objects::nonNull)
+            .toList();
+        Map<Integer, DemandeurVisaCarteResident> residentLinkByDemandeurId =
+            demandeDossierService.findResidentLinksByDemandeurIds(demandeurIds);
+        Map<Integer, List<HistoStatutDemande>> historiquesByDemandeurId =
+            demandeDossierService.findHistoriquesByDemandeurIds(demandeurIds);
+
+        model.addAttribute("residentDetailsByDemande", buildResidentDetailsByDemande(dossiersTerminees, residentLinkByDemandeurId));
+        model.addAttribute("historiquesByDemande", buildHistoriquesByDemande(dossiersTerminees, historiquesByDemandeurId));
         model.addAttribute("dossiersTerminees", dossiersTerminees);
         return "dossier-terminee";
     }
 
-    private Map<Integer, Map<String, String>> buildResidentDetailsByDemande(List<Demande> dossiersTerminees) {
+    private Map<Integer, Map<String, String>> buildResidentDetailsByDemande(
+            List<Demande> dossiersTerminees,
+            Map<Integer, DemandeurVisaCarteResident> residentLinkByDemandeurId) {
         Map<Integer, Map<String, String>> detailsByDemande = new HashMap<>();
 
         for (Demande demande : dossiersTerminees) {
@@ -201,10 +219,16 @@ public class NouveauTitreController {
                 continue;
             }
 
-            Visa visa = demande.getVisa();
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            DemandeurVisaCarteResident residentLink = demandeurId == null
+                ? null
+                : residentLinkByDemandeurId.get(demandeurId);
+            Visa visa = residentLink == null ? null : residentLink.getVisa();
+            CarteResident carteResident = residentLink == null ? null : residentLink.getCarteResident();
             Map<String, String> details = new LinkedHashMap<>();
             details.put("demandeur", buildDemandeurName(demande));
-            details.put("reference", resolveText(visa == null ? null : visa.getReference()));
+            details.put("numeroCarteResident", resolveText(carteResident == null ? null : carteResident.getNumero()));
+            details.put("referenceVisa", resolveText(visa == null ? null : visa.getReference()));
             details.put("categorie", resolveText(
                     visa == null || visa.getCategorieVisa() == null
                             ? null
@@ -220,9 +244,12 @@ public class NouveauTitreController {
                             ? null
                             : demande.getStatut().getLibelle()
             ));
-            details.put("dateDebut", formatDate(visa == null ? null : visa.getDateDebut()));
-            details.put("dateFin", formatDate(visa == null ? null : visa.getDateFin()));
-            details.put("duree", formatDuree(visa == null ? null : visa.getDateDebut(), visa == null ? null : visa.getDateFin()));
+                    details.put("dateDonnation", formatDate(carteResident == null ? null : carteResident.getDateDonnation()));
+                    details.put("dateExpiration", formatDate(carteResident == null ? null : carteResident.getDateExpiration()));
+                    details.put("duree", formatDuree(
+                        carteResident == null ? null : carteResident.getDateDonnation(),
+                        carteResident == null ? null : carteResident.getDateExpiration()
+                    ));
             details.put("numeroPasseport", resolveText(
                     visa == null || visa.getPasseport() == null
                             ? null
@@ -233,6 +260,59 @@ public class NouveauTitreController {
         }
 
         return detailsByDemande;
+    }
+
+    private Map<Integer, List<Map<String, String>>> buildHistoriquesByDemande(
+            List<Demande> dossiersTerminees,
+            Map<Integer, List<HistoStatutDemande>> historiquesByDemandeurId) {
+        Map<Integer, List<Map<String, String>>> detailsByDemande = new HashMap<>();
+
+        for (Demande demande : dossiersTerminees) {
+            if (demande == null || demande.getId() == null) {
+                continue;
+            }
+
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            List<HistoStatutDemande> historiques = demandeurId == null
+                ? List.of()
+                : historiquesByDemandeurId.getOrDefault(demandeurId, List.of());
+
+            List<Map<String, String>> items = new java.util.ArrayList<>();
+            for (HistoStatutDemande historique : historiques) {
+                Map<String, String> item = new LinkedHashMap<>();
+                StatutDemande statut = historique.getStatut();
+                Integer statutId = statut == null ? null : statut.getId();
+                String statutLibelle = statut == null ? null : statut.getLibelle();
+
+                item.put("date", historique.getDateChangement() == null
+                    ? "Non renseignee"
+                    : historique.getDateChangement().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                item.put("statutId", statutId == null ? "-" : String.valueOf(statutId));
+                item.put("statutLabel", resolveStatutLabel(statutLibelle));
+                item.put("commentaire", resolveText(historique.getCommentaire()));
+                items.add(item);
+            }
+
+            detailsByDemande.put(demande.getId(), items);
+        }
+
+        return detailsByDemande;
+    }
+
+    private String resolveStatutLabel(String statutLibelle) {
+        if (statutLibelle == null || statutLibelle.isBlank()) {
+            return "Statut non renseigne";
+        }
+
+        String normalized = statutLibelle.trim().toLowerCase();
+        if ("cree".equals(normalized) || "en_cours".equals(normalized)) {
+            return "Dossier cree";
+        }
+        if ("terminee".equals(normalized)) {
+            return "Dossier terminee";
+        }
+
+        return statutLibelle.trim();
     }
 
     private String buildDemandeurName(Demande demande) {

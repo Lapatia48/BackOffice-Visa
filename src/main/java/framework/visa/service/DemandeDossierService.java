@@ -1,19 +1,23 @@
 package framework.visa.service;
 
 import framework.visa.config.VisaConfig;
+import framework.visa.entity.CarteResident;
 import framework.visa.entity.CategorieVisa;
 import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Demandeur;
+import framework.visa.entity.DemandeurVisaCarteResident;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Passeport;
 import framework.visa.entity.StatutDemande;
 import framework.visa.entity.Visa;
 import framework.visa.entity.VisaTransformable;
+import framework.visa.repository.CarteResidentRepository;
 import framework.visa.repository.CategorieVisaRepository;
 import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
 import framework.visa.repository.DemandeurRepository;
+import framework.visa.repository.DemandeurVisaCarteResidentRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
@@ -28,8 +32,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -38,6 +44,7 @@ public class DemandeDossierService {
     private static final String STATUS_TERMINEE = "terminee";
     private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
     private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final String CARTE_RESIDENT_PREFIX = "CR";
 
     private final DemandeDossierRepository repository;
     private final DemandeRepository demandeRepository;
@@ -49,6 +56,8 @@ public class DemandeDossierService {
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
     private final VisaRepository visaRepository;
     private final VisaTransformableRepository visaTransformableRepository;
+    private final CarteResidentRepository carteResidentRepository;
+    private final DemandeurVisaCarteResidentRepository demandeurVisaCarteResidentRepository;
     private final CategorieVisaRepository categorieVisaRepository;
     private final VisaConfig visaConfig;
 
@@ -63,6 +72,8 @@ public class DemandeDossierService {
             HistoStatutDemandeRepository histoStatutDemandeRepository,
             VisaRepository visaRepository,
             VisaTransformableRepository visaTransformableRepository,
+            CarteResidentRepository carteResidentRepository,
+            DemandeurVisaCarteResidentRepository demandeurVisaCarteResidentRepository,
             CategorieVisaRepository categorieVisaRepository,
             VisaConfig visaConfig) {
         this.repository = repository;
@@ -75,6 +86,8 @@ public class DemandeDossierService {
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
         this.visaRepository = visaRepository;
         this.visaTransformableRepository = visaTransformableRepository;
+        this.carteResidentRepository = carteResidentRepository;
+        this.demandeurVisaCarteResidentRepository = demandeurVisaCarteResidentRepository;
         this.categorieVisaRepository = categorieVisaRepository;
         this.visaConfig = visaConfig;
     }
@@ -107,6 +120,61 @@ public class DemandeDossierService {
                 .map(Demande::getDemandeur)
                 .map(Demandeur::getId)
                 .flatMap(visaTransformableRepository::findFirstByDemandeurIdOrderByIdDesc);
+    }
+
+    public Map<Integer, CarteResident> findCarteResidentsByVisaIds(Collection<Integer> visaIds) {
+        if (visaIds == null || visaIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, CarteResident> cartesByVisaId = new HashMap<>();
+        List<DemandeurVisaCarteResident> links = demandeurVisaCarteResidentRepository.findWithDetailsByVisaIdIn(visaIds);
+        for (DemandeurVisaCarteResident link : links) {
+            if (link.getVisa() == null || link.getVisa().getId() == null || link.getCarteResident() == null) {
+                continue;
+            }
+            cartesByVisaId.put(link.getVisa().getId(), link.getCarteResident());
+        }
+
+        return cartesByVisaId;
+    }
+
+    public Map<Integer, DemandeurVisaCarteResident> findResidentLinksByDemandeurIds(Collection<Integer> demandeurIds) {
+        if (demandeurIds == null || demandeurIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, DemandeurVisaCarteResident> linkByDemandeurId = new HashMap<>();
+        List<DemandeurVisaCarteResident> links = demandeurVisaCarteResidentRepository.findWithDetailsByDemandeurIdIn(demandeurIds);
+        for (DemandeurVisaCarteResident link : links) {
+            if (link.getDemandeur() == null || link.getDemandeur().getId() == null) {
+                continue;
+            }
+            linkByDemandeurId.putIfAbsent(link.getDemandeur().getId(), link);
+        }
+        return linkByDemandeurId;
+    }
+
+    public Map<Integer, List<HistoStatutDemande>> findHistoriquesByDemandeurIds(Collection<Integer> demandeurIds) {
+        if (demandeurIds == null || demandeurIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, List<HistoStatutDemande>> historiqueByDemandeurId = new HashMap<>();
+        List<HistoStatutDemande> historiques = histoStatutDemandeRepository.findByDemandeurIds(demandeurIds);
+        for (HistoStatutDemande historique : historiques) {
+            Integer demandeurId = historique.getDemande() == null || historique.getDemande().getDemandeur() == null
+                    ? null
+                    : historique.getDemande().getDemandeur().getId();
+            if (demandeurId == null) {
+                continue;
+            }
+
+            historiqueByDemandeurId.computeIfAbsent(demandeurId, ignored -> new java.util.ArrayList<>())
+                    .add(historique);
+        }
+
+        return historiqueByDemandeurId;
     }
 
     public List<DemandeDossier> findByDemandeId(Integer demandeId) {
@@ -253,12 +321,13 @@ public class DemandeDossierService {
     }
 
     private void issueVisaIfNeeded(Demande demande) {
-        if (demande.getVisa() != null) {
-            return;
+        Visa visa = demande.getVisa();
+        if (visa == null) {
+            visa = createVisaForNouveauTitre(demande);
+            demande.setVisa(visa);
         }
 
-        Visa visa = createVisaForNouveauTitre(demande);
-        demande.setVisa(visa);
+        createCarteResidentIfNeeded(demande, visa);
     }
 
     private Visa createVisaForNouveauTitre(Demande demande) {
@@ -297,6 +366,59 @@ public class DemandeDossierService {
     private String buildVisaReference(Integer demandeId) {
         String timestamp = LocalDateTime.now().format(REFERENCE_TIMESTAMP_FORMATTER);
         return "VISA-NT-" + demandeId + "-" + timestamp;
+    }
+
+    private void createCarteResidentIfNeeded(Demande demande, Visa visa) {
+        Demandeur demandeur = demande.getDemandeur();
+        if (demandeur == null || demandeur.getId() == null || visa == null || visa.getId() == null) {
+            return;
+        }
+
+        boolean hasCarteResident = demandeurVisaCarteResidentRepository
+            .findFirstWithDetailsByVisaId(visa.getId())
+                .isPresent();
+        if (hasCarteResident) {
+            return;
+        }
+
+        CarteResident carteResident = new CarteResident();
+        carteResident.setNumero(generateNextCarteResidentNumero());
+        carteResident.setDateDonnation(visa.getDateDebut() == null ? LocalDate.now() : visa.getDateDebut());
+        carteResident.setDateExpiration(visa.getDateFin() == null ? LocalDate.now() : visa.getDateFin());
+        carteResident = carteResidentRepository.save(carteResident);
+
+        DemandeurVisaCarteResident link = new DemandeurVisaCarteResident();
+        link.setDemandeur(demandeur);
+        link.setVisa(visa);
+        link.setCarteResident(carteResident);
+        demandeurVisaCarteResidentRepository.save(link);
+
+        appendHistorique(demande, "Carte resident creee : " + carteResident.getNumero() + ".");
+    }
+
+    private String generateNextCarteResidentNumero() {
+        int nextNumber = carteResidentRepository.findFirstByOrderByIdDesc()
+                .map(CarteResident::getNumero)
+                .map(this::extractNumeroSequence)
+                .orElse(0) + 1;
+        return CARTE_RESIDENT_PREFIX + String.format("%04d", nextNumber);
+    }
+
+    private int extractNumeroSequence(String numero) {
+        if (numero == null || numero.isBlank()) {
+            return 0;
+        }
+
+        String digits = numero.replaceAll("\\D", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+
+        try {
+            return Integer.parseInt(digits);
+        } catch (NumberFormatException exception) {
+            return 0;
+        }
     }
 
     private void updateDemandeurAndPasseport(

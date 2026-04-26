@@ -72,6 +72,27 @@ CREATE TABLE Visa (
     id_passeport INT REFERENCES Passeport(id)
 );
 
+CREATE TABLE Carte_resident (
+    id SERIAL PRIMARY KEY,
+    numero VARCHAR(20) NOT NULL UNIQUE,
+    date_donnation DATE NOT NULL,
+    date_expiration DATE NOT NULL
+);
+
+CREATE TABLE Demandeur_visa_carte_resident (
+    id SERIAL PRIMARY KEY,
+    id_demandeur INT NOT NULL REFERENCES Demandeur(id),
+    id_visa INT NOT NULL REFERENCES Visa(id),
+    id_carte_resident INT NOT NULL REFERENCES Carte_resident(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ux_demandeur_visa_carte_resident_visa UNIQUE (id_visa),
+    CONSTRAINT ux_demandeur_visa_carte_resident_carte UNIQUE (id_carte_resident),
+    CONSTRAINT ux_demandeur_visa_carte_resident_all UNIQUE (id_demandeur, id_visa, id_carte_resident)
+);
+
+CREATE INDEX ix_demandeur_visa_carte_resident_demandeur ON Demandeur_visa_carte_resident(id_demandeur);
+CREATE INDEX ix_demandeur_visa_carte_resident_visa ON Demandeur_visa_carte_resident(id_visa);
+
 CREATE TABLE Demande (
     id SERIAL PRIMARY KEY,
     date_demande DATE NOT NULL,
