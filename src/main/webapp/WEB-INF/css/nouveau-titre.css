@@ -1,0 +1,325 @@
+/* nouveau-titre.css */
+/* Palette de couleurs élégante crème/blanc */
+:root {
+    --bg-page: #fefcf5;
+    --bg-white: #ffffff;
+    --bg-sidebar: #ffffff;
+    --border-light: #e8e4d9;
+    --border-focus: #d4c9b3;
+    --text-primary: #2c2b28;
+    --text-secondary: #6b6a66;
+    --text-label: #4a4945;
+    --accent: #c4b7a6;
+    --accent-hover: #b0a18e;
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.04);
+    --radius-md: 16px;
+    --radius-sm: 12px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.5;
+    padding: 2rem;
+    min-height: 100vh;
+}
+
+/* Titre principal raffiné */
+h1 {
+    font-size: 1.75rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+/* Sidebar horizontale en haut - design élégant */
+.horizontal-sidebar {
+    background: var(--bg-sidebar);
+    backdrop-filter: blur(0px);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+}
+
+.horizontal-sidebar a {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.6rem 1.25rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 470;
+    border-radius: 40px;
+    transition: all 0.2s ease;
+    background: transparent;
+}
+
+.horizontal-sidebar a:first-child {
+    background: var(--accent);
+    color: white;
+}
+
+.horizontal-sidebar a:first-child:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.horizontal-sidebar a:not(:first-child):hover {
+    background: #f5f2ea;
+    color: var(--text-primary);
+}
+
+/* Message d'erreur élégant */
+.error {
+    background: #e47272;
+    border-left: 4px solid #ff0000;
+    padding: 0.9rem 1.25rem;
+    border-radius: var(--radius-sm);
+    color: #000000;
+    font-size: 0.875rem;
+    margin-bottom: 1.75rem;
+}
+
+/* Layout deux colonnes pour les formulaires */
+form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.gauche, .droite {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+}
+
+/* Blocs de formulaire - design carte élégante */
+.bloc {
+    background: var(--bg-white);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    transition: box-shadow 0.2s ease;
+}
+
+.bloc:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 540;
+    letter-spacing: -0.2px;
+    color: var(--text-primary);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid var(--border-light);
+    position: relative;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: var(--accent);
+}
+
+/* Labels et champs de formulaire */
+label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 470;
+    color: var(--text-label);
+    margin-bottom: 0.35rem;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    background: var(--bg-white);
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    margin-top: 0.2rem;
+    margin-bottom: 1rem;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(196, 183, 166, 0.1);
+}
+
+/* Checkboxes élégantes */
+.inline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: var(--text-primary);
+}
+
+.inline-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
+.obligatoire {
+    font-size: 0.7rem;
+    color: #d4a373;
+    font-weight: 450;
+    margin-left: 0.3rem;
+}
+
+.optionnel {
+    font-size: 0.7rem;
+    color: #9e9a93;
+    font-weight: 400;
+    margin-left: 0.3rem;
+}
+
+/* Groupes conditionnels (pièces complémentaires) */
+.typed-group {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    animation: fadeIn 0.2s ease;
+}
+
+.typed-group h3 {
+    font-size: 0.9rem;
+    font-weight: 530;
+    color: var(--accent-hover);
+    margin-bottom: 0.75rem;
+    padding-left: 0.25rem;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Bouton de soumission (à ajouter si nécessaire) */
+form button[type="submit"] {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.85rem 1.8rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 40px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.5rem;
+    width: auto;
+    display: inline-block;
+}
+
+.submit-infos-suffix {
+    display: none;
+    color: #d12a2a;
+    font-weight: 600;
+}
+
+.section-header-with-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.section-header-with-action .section-title {
+    margin-bottom: 0.9rem;
+}
+
+.secondary-action {
+    border: 1px solid var(--border-light);
+    background: #fbf8f0;
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.secondary-action:hover {
+    border-color: var(--accent);
+    background: #f4efe3;
+}
+
+.editable-active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(196, 183, 166, 0.12);
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    body {
+        padding: 1.25rem;
+    }
+    
+    form {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .horizontal-sidebar {
+        justify-content: center;
+    }
+}
+
+/* Ajustements pour les blocs de type visa */
+.bloc label:has(select) {
+    margin-bottom: 0;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b6a66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
+}
+
+/* Titre du formulaire principal */
+form > div:first-child .bloc:first-child select {
+    background-color: var(--bg-white);
+}
