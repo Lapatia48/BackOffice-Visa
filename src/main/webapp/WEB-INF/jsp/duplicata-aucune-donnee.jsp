@@ -30,7 +30,7 @@
 <div class="bloc">
     <h2 class="section-title">Entrer de nouvelles donnees</h2>
     <p>Vous pouvez saisir une nouvelle demande avec le meme format que la creation de nouveau titre.</p>
-    <a href="${pageContext.request.contextPath}/nouveau-titre">
+    <a href="${pageContext.request.contextPath}/nouveau-titre?mode=duplicata">
         <button type="button">Entrer de nouvelles donnees</button>
     </a>
 </div>

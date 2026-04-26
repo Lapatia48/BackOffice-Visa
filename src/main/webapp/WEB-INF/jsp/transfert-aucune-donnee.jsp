@@ -26,7 +26,7 @@
     <p class="error"><%= (error == null || error.isBlank()) ? "Aucune donnee anterieure trouvee pour ce demandeur." : error %></p>
     <h2 class="section-title">Entrer de nouvelles donnees</h2>
     <p>Aucune information precedente n'a ete retrouvee. Vous pouvez saisir une nouvelle demande.</p>
-    <a href="${pageContext.request.contextPath}/nouveau-titre">
+    <a href="${pageContext.request.contextPath}/nouveau-titre?mode=transfert">
         <button type="button">Entrer de nouvelles donnees</button>
     </a>
 </div>

@@ -1,25 +1,33 @@
-## Sprint 2 : Duplicata — traitement des cas de perte et sans données antérieures.*
-Une personne peut faire une demande de duplicata de carte de résident ou un transfert de visa en cas de perte. Les deux cas partagent le même formulaire, avec un choix au départ :
-- Passeport perdu → Transfert de visa vers le nouveau passeport. L'information supplémentaire requise est uniquement le nouveau numéro de passeport.
-- Carte de résident perdue → Demande de duplicata de carte de résident.
+## Sprint 2 : Duplicata et Transfert Visa (avec et sans donnees anterieures)
 
-Dans les deux cas, si la personne est déjà dans le système, ses données sont pré-remplies.
+### Regles metier
 
-Si la personne n'a aucune donnée antérieure dans le système, elle saisit toutes les informations from scratch, comme pour une nouvelle demande. Le statut sera directement Approuvée (et non "Document créé" comme au Sprint 1), car il s'agit d'une régularisation administrative.
+1. Demande de type duplicata
+- Cas avec donnees anterieures:
+    Recherche sur la carte resident concernee du demandeur.
+- Cas sans donnees anterieures:
+    Nouvelle saisie complete (meme formulaire qu'un nouveau titre).
+    Le systeme cree ensuite deux demandes:
+    - une demande nouveau titre avec statut validee/acceptee
+    - une demande duplicata avec statut cree, basee sur les memes donnees saisies
 
+2. Demande de type transfert visa
+- Cas avec donnees anterieures:
+    Recherche sur le visa concerne du demandeur, puis transfert vers le passeport cible.
+- Cas sans donnees anterieures:
+    Nouvelle saisie complete (meme formulaire qu'un nouveau titre) avec passeport obligatoire
+    et informations de visa transformable.
+    Le systeme cree ensuite deux demandes:
+    - une demande nouveau titre avec statut validee/acceptee
+    - une demande transfert visa avec statut cree, basee sur les memes donnees saisies
 
-etat civil -- ok
-infos simples -- ok
-infos sur passeport (dernier) --ok 
-infos sur le dernier visa(dernier) -- ok
-infos carte de resident : 
-    Numero carte resident
-    Reference visa
-    Categorie
-    Type demande
-    Statut dossier
-    Date donnation
-    Date expiration
-    Duree de validite
-    Numero passeport
-Bouton creer un duplicata
+### Ecrans / workflow
+
+- Les pages restent separees par type (duplicata et transfert visa) mais suivent les memes etapes.
+- Le cas sans donnees anterieures redirige vers la saisie complete.
+- La derniere etape affiche:
+    - informations de la demande (type, statut, date_demande)
+    - pieces justificatives du type de demande concerne (duplicata ou transfert)
+    - informations creees sur carte resident et visa (references generees automatiquement)
+    - informations du nouveau titre cree (cas sans donnees anterieures)
+    - informations du visa transformable saisi (cas sans donnees anterieures)

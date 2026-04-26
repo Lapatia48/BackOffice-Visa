@@ -49,8 +49,11 @@ import java.util.Set;
 public class DemandeWorkflowService {
         private static final String STATUS_CREE = "cree";
         private static final String STATUS_TERMINEE = "terminee";
+        private static final String STATUS_VALIDEE = "approuve";
         private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
         private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
+        private static final String TYPE_DUPLICATA = "duplicata";
+        private static final String TYPE_TRANSFERT_VISA = "transfert";
         private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
         private static final String CARTE_RESIDENT_PREFIX = "CR";
 
@@ -109,6 +112,30 @@ public class DemandeWorkflowService {
                 this.visaConfig = visaConfig;
         }
 
+        public static class SansDonneesCreationResult {
+                private final Integer demandeNouveauTitreId;
+                private final Integer demandeOperationId;
+                private final Integer demandeurId;
+
+                public SansDonneesCreationResult(Integer demandeNouveauTitreId, Integer demandeOperationId, Integer demandeurId) {
+                        this.demandeNouveauTitreId = demandeNouveauTitreId;
+                        this.demandeOperationId = demandeOperationId;
+                        this.demandeurId = demandeurId;
+                }
+
+                public Integer getDemandeNouveauTitreId() {
+                        return demandeNouveauTitreId;
+                }
+
+                public Integer getDemandeOperationId() {
+                        return demandeOperationId;
+                }
+
+                public Integer getDemandeurId() {
+                        return demandeurId;
+                }
+        }
+
         @Transactional
         public Integer submitNouveauTitre(
                         String nom,
@@ -131,7 +158,8 @@ public class DemandeWorkflowService {
                         LocalDate dateExpirationVisaTransformable,
                         Integer typeVisaId,
                         List<Integer> dossierIds,
-                        String observations) {
+                        String observations,
+                        String carteEtatLibelle) {
 
                 TypeDemande typeVisa = typeDemandeRepository.findById(typeVisaId)
                                 .orElseThrow(() -> new IllegalArgumentException("Type de visa introuvable."));
@@ -205,7 +233,10 @@ public class DemandeWorkflowService {
                         demande.setVisa(visa);
                         demandeRepository.save(demande);
 
-                        CarteResident carteResident = createCarteResidentForVisa(demandeur, visa);
+                        String etatCarte = (carteEtatLibelle != null && !carteEtatLibelle.isBlank())
+                                        ? carteEtatLibelle.trim()
+                                        : ETAT_NOUVEAU_TITRE;
+                        CarteResident carteResident = createCarteResidentForVisa(demandeur, visa, etatCarte);
                         appendHistorique(demande, statut, "Visa long sejour cree : " + visa.getReference() + ".");
                         appendHistorique(demande, statut, "Carte resident creee : " + carteResident.getNumero() + ".");
                 }
@@ -231,6 +262,114 @@ public class DemandeWorkflowService {
                 appendHistorique(demande, statut, "Visa transformable renseigne et lie au demandeur.");
 
                 return demande.getId();
+        }
+
+        @Transactional
+        public SansDonneesCreationResult submitSansDonneesAnterieures(
+                        String modeOperation,
+                        String nom,
+                        String prenom,
+                        LocalDate dateNaissance,
+                        String lieuNaissance,
+                        Integer situationFamilialeId,
+                        Integer nationaliteId,
+                        String telephone,
+                        String email,
+                        String adresse,
+                        String numeroPasseport,
+                        LocalDate dateDelivrance,
+                        LocalDate dateExpiration,
+                        String paysDelivrance,
+                        String referenceVisaTransformable,
+                        LocalDate dateArriveeMadagascar,
+                        String lieuEntreeMadagascar,
+                        LocalDate dateDonnationVisaTransformable,
+                        LocalDate dateExpirationVisaTransformable,
+                        Integer typeVisaId,
+                        List<Integer> dossierIds,
+                        List<Integer> operationDossierIds,
+                        String observations,
+                        String carteEtatLibelle) {
+
+                String normalizedMode = normalizeModeOperation(modeOperation);
+
+                TypeDemande typeVisa = typeDemandeRepository.findById(typeVisaId)
+                                .orElseThrow(() -> new IllegalArgumentException("Type de visa introuvable."));
+
+                validateVisaTransformableExpiration(dateExpirationVisaTransformable);
+
+                Demandeur demandeur = buildDemandeur(
+                                nom,
+                                prenom,
+                                dateNaissance,
+                                lieuNaissance,
+                                situationFamilialeId,
+                                nationaliteId,
+                                telephone,
+                                email,
+                                adresse
+                );
+
+                Passeport passeport = new Passeport();
+                passeport.setDemandeur(demandeur);
+                passeport.setNumeroPasseport(numeroPasseport);
+                passeport.setDateDelivrance(dateDelivrance);
+                passeport.setDateExpiration(dateExpiration);
+                passeport.setPaysDelivrance(paysDelivrance);
+                passeport = passeportRepository.save(passeport);
+
+                VisaTransformable visaTransformable = new VisaTransformable();
+                visaTransformable.setDemandeur(demandeur);
+                visaTransformable.setReference(requireNonBlank(referenceVisaTransformable, "Reference visa transformable"));
+                visaTransformable.setDateArriveeMadagascar(requireDate(dateArriveeMadagascar, "Date d'arrivee a Madagascar"));
+                visaTransformable.setLieuEntreeMadagascar(requireNonBlank(lieuEntreeMadagascar, "Lieu d'entree a Madagascar"));
+                visaTransformable.setDateDonnation(requireDate(dateDonnationVisaTransformable, "Date de donnation visa transformable"));
+                visaTransformable.setDateExpiration(requireDate(dateExpirationVisaTransformable, "Date d'expiration visa transformable"));
+                visaTransformableRepository.save(visaTransformable);
+
+                StatutDemande statutValidee = getOrCreateStatus(STATUS_VALIDEE);
+                Demande demandeNouveauTitre = new Demande();
+                demandeNouveauTitre.setDateDemande(LocalDate.now());
+                demandeNouveauTitre.setDateTraitement(LocalDate.now());
+                demandeNouveauTitre.setStatut(statutValidee);
+                demandeNouveauTitre.setDemandeur(demandeur);
+                demandeNouveauTitre.setTypeDemande(typeVisa);
+                demandeNouveauTitre.setObservations(observations);
+                demandeNouveauTitre = demandeRepository.save(demandeNouveauTitre);
+
+                Visa visa = createVisaForNouveauTitre(demandeNouveauTitre, passeport);
+                demandeNouveauTitre.setVisa(visa);
+                demandeRepository.save(demandeNouveauTitre);
+
+                String etatCarte = (carteEtatLibelle != null && !carteEtatLibelle.isBlank())
+                                ? carteEtatLibelle.trim()
+                                : ETAT_NOUVEAU_TITRE;
+                CarteResident carteResident = createCarteResidentForVisa(demandeur, visa, etatCarte);
+
+                createDemandeDossiers(demandeNouveauTitre, collectApplicableDossiers(typeVisa.getId()), dossierIds);
+                appendHistorique(demandeNouveauTitre, statutValidee, "Demande nouveau titre validee automatiquement (cas sans donnees anterieures). ");
+                appendHistorique(demandeNouveauTitre, statutValidee, "Visa long sejour cree : " + visa.getReference() + ".");
+                appendHistorique(demandeNouveauTitre, statutValidee, "Carte resident creee : " + carteResident.getNumero() + ".");
+                appendHistorique(demandeNouveauTitre, statutValidee, "Visa transformable renseigne et lie au demandeur.");
+
+                TypeDemande typeOperation = resolveOperationType(normalizedMode);
+                StatutDemande statutOperation = getOrCreateStatus(STATUS_TERMINEE);
+
+                Demande demandeOperation = new Demande();
+                demandeOperation.setDateDemande(LocalDate.now());
+                demandeOperation.setDateTraitement(LocalDate.now());
+                demandeOperation.setStatut(statutOperation);
+                demandeOperation.setDemandeur(demandeur);
+                demandeOperation.setTypeDemande(typeOperation);
+                demandeOperation.setVisa(visa);
+                demandeOperation.setObservations(buildOperationObservation(normalizedMode, observations));
+                demandeOperation = demandeRepository.save(demandeOperation);
+
+                createDemandeDossiers(demandeOperation, collectApplicableDossiers(typeOperation.getId()), operationDossierIds, true);
+                appendHistorique(demandeOperation, statutOperation,
+                                "Demande " + typeOperation.getLibelle() + " creee automatiquement a partir des donnees saisies et terminee avec pieces valides.");
+
+                return new SansDonneesCreationResult(demandeNouveauTitre.getId(), demandeOperation.getId(), demandeur.getId());
         }
 
         private Demandeur buildDemandeur(
@@ -263,6 +402,85 @@ public class DemandeWorkflowService {
                 return demandeurRepository.save(demandeur);
         }
 
+        private List<Dossier> collectApplicableDossiers(Integer typeId) {
+                LinkedHashMap<Integer, Dossier> applicableDossiersById = new LinkedHashMap<>();
+                for (Dossier dossier : dossierTypeVisaRepository.findCommonDossiers()) {
+                        applicableDossiersById.put(dossier.getId(), dossier);
+                }
+                if (typeId != null) {
+                        for (Dossier dossier : dossierTypeVisaRepository.findDossiersByTypeId(typeId)) {
+                                applicableDossiersById.put(dossier.getId(), dossier);
+                        }
+                }
+                return List.copyOf(applicableDossiersById.values());
+        }
+
+        private void createDemandeDossiers(Demande demande, List<Dossier> applicableDossiers, List<Integer> selectedDossierIdsInput) {
+                createDemandeDossiers(demande, applicableDossiers, selectedDossierIdsInput, false);
+        }
+
+        private void createDemandeDossiers(
+                        Demande demande,
+                        List<Dossier> applicableDossiers,
+                        List<Integer> selectedDossierIdsInput,
+                        boolean forceAllProvided) {
+                Set<Integer> selectedDossierIds = selectedDossierIdsInput == null
+                                ? Set.of()
+                                : new HashSet<>(selectedDossierIdsInput);
+
+                for (Dossier dossier : applicableDossiers) {
+                        DemandeDossier demandeDossier = new DemandeDossier();
+                        demandeDossier.setDemande(demande);
+                        demandeDossier.setDossier(dossier);
+                        boolean fourni = forceAllProvided || selectedDossierIds.contains(dossier.getId());
+                        demandeDossier.setEstFourni(fourni);
+                        if (!demandeDossier.isEstFourni() && !dossier.isObligatoire()) {
+                                demandeDossier.setCommentaire("Piece non obligatoire non fournie.");
+                        } else if (forceAllProvided && dossier.isObligatoire()) {
+                                demandeDossier.setCommentaire("Piece obligatoire validee automatiquement a la creation.");
+                        }
+                        demandeDossierRepository.save(demandeDossier);
+                }
+        }
+
+        private String normalizeModeOperation(String modeOperation) {
+                if (modeOperation == null || modeOperation.isBlank()) {
+                        throw new IllegalArgumentException("Mode sans donnees anterieures invalide.");
+                }
+
+                String normalized = modeOperation.trim().toLowerCase();
+                if (!TYPE_DUPLICATA.equals(normalized) && !"transfert".equals(normalized)) {
+                        throw new IllegalArgumentException("Mode sans donnees anterieures non supporte: " + modeOperation);
+                }
+
+                return normalized;
+        }
+
+        private TypeDemande resolveOperationType(String normalizedMode) {
+                String operationLabel = TYPE_DUPLICATA.equals(normalizedMode)
+                                ? TYPE_DUPLICATA
+                                : TYPE_TRANSFERT_VISA;
+
+                return typeDemandeRepository.findFirstByLibelleIgnoreCase(operationLabel)
+                                .orElseGet(() -> {
+                                        TypeDemande typeDemande = new TypeDemande();
+                                        typeDemande.setLibelle(operationLabel);
+                                        return typeDemandeRepository.save(typeDemande);
+                                });
+        }
+
+        private String buildOperationObservation(String normalizedMode, String observations) {
+                String prefix = TYPE_DUPLICATA.equals(normalizedMode)
+                                ? "Demande duplicata creee depuis parcours sans donnees anterieures."
+                                : "Demande transfert visa creee depuis parcours sans donnees anterieures.";
+
+                if (observations == null || observations.isBlank()) {
+                        return prefix;
+                }
+
+                return prefix + " " + observations.trim();
+        }
+
         private Visa createVisaForNouveauTitre(Demande demande, Passeport passeport) {
                 CategorieVisa categorieVisa = resolveNouveauTitreCategorie();
 
@@ -289,7 +507,7 @@ public class DemandeWorkflowService {
         }
 
         //create createCarteResidentIfNeeded
-        private CarteResident createCarteResidentForVisa(Demandeur demandeur, Visa visa) {
+        private CarteResident createCarteResidentForVisa(Demandeur demandeur, Visa visa, String etatCarteLibelle) {
                 Optional<DemandeurVisaCarteResident> existingLink = demandeurVisaCarteResidentRepository
                                 .findFirstWithDetailsByVisaId(visa.getId());
                 if (existingLink.isPresent() && existingLink.get().getCarteResident() != null) {
@@ -301,7 +519,10 @@ public class DemandeWorkflowService {
                 carteResident.setDateDonnation(visa.getDateDebut() == null ? LocalDate.now() : visa.getDateDebut());
                 carteResident.setDateExpiration(visa.getDateFin() == null ? LocalDate.now() : visa.getDateFin());
                 carteResident.setDemandeur(demandeur);
-                carteResident.setEtat(resolveEtat(ETAT_NOUVEAU_TITRE));
+                String etatToUse = (etatCarteLibelle != null && !etatCarteLibelle.isBlank())
+                                ? etatCarteLibelle.trim()
+                                : ETAT_NOUVEAU_TITRE;
+                carteResident.setEtat(resolveEtat(etatToUse));
                 carteResident = carteResidentRepository.save(carteResident);
 
                 DemandeurVisaCarteResident link = new DemandeurVisaCarteResident();

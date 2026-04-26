@@ -42,6 +42,30 @@
     }
 
     String error = (String) request.getAttribute("error");
+    Boolean modeDuplicata = (Boolean) request.getAttribute("modeDuplicata");
+    if (modeDuplicata == null) {
+        modeDuplicata = false;
+    }
+
+    Boolean modeTransfert = (Boolean) request.getAttribute("modeTransfert");
+    if (modeTransfert == null) {
+        modeTransfert = false;
+    }
+
+    String modeOperation = (String) request.getAttribute("modeOperation");
+    if (modeOperation == null) {
+        modeOperation = "";
+    }
+
+    String carteEtatLibelle = (String) request.getAttribute("carteEtatLibelle");
+    if (carteEtatLibelle == null || carteEtatLibelle.isBlank()) {
+        carteEtatLibelle = "nouveau titre";
+    }
+
+    List<Dossier> operationDossiers = (List<Dossier>) request.getAttribute("operationDossiers");
+    if (operationDossiers == null) {
+        operationDossiers = Collections.emptyList();
+    }
 %>
 
 <h1>Formulaire - Nouveau titre</h1>
@@ -57,7 +81,17 @@
 <p class="error"><%= error %></p>
 <% } %>
 
+<% if (modeDuplicata) { %>
+<p class="message">Mode duplicata active: la carte resident creee sera en etat "duplicata".</p>
+<% } %>
+
+<% if (modeTransfert) { %>
+<p class="message">Mode transfert active: une demande transfert visa sera creee en parallele avec statut "cree".</p>
+<% } %>
+
 <form method="post" action="/nouveau-titre">
+    <input type="hidden" name="carteEtatLibelle" value="<%= carteEtatLibelle %>">
+    <input type="hidden" name="modeOperation" value="<%= modeOperation %>">
 
     <div class="gauche">
         <div class="bloc">
@@ -129,6 +163,23 @@
                 </div>
             <% } %>
         </div>
+
+        <% if (!operationDossiers.isEmpty()) { %>
+        <div class="bloc">
+            <h2 class="section-title">Pieces justificatives <%= modeOperation %></h2>
+            <% for (Dossier dossier : operationDossiers) { %>
+                <label class="inline-checkbox">
+                    <input type="checkbox" name="operationDossierIds" value="<%= dossier.getId() %>">
+                    <%= dossier.getLibelle() %>
+                    <% if (dossier.isObligatoire()) { %>
+                        <span class="obligatoire">(obligatoire)</span>
+                    <% } else { %>
+                        <span class="optionnel">(optionnel)</span>
+                    <% } %>
+                </label>
+            <% } %>
+        </div>
+        <% } %>
 
         <div class="bloc">
             <button type="submit">Confirmer</button>

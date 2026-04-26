@@ -10,6 +10,31 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'investisseur'
 );
 
+INSERT INTO Categorie_visa (libelle)
+SELECT 'etudiant'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Categorie_visa WHERE lower(libelle) = 'etudiant'
+);
+
+INSERT INTO Type_demande (libelle)
+SELECT 'nouveau_titre'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'nouveau_titre'
+);
+
+INSERT INTO Type_demande (libelle)
+SELECT 'duplicata'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'duplicata'
+);
+
+INSERT INTO Type_demande (libelle)
+SELECT 'transfert'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'transfert'
+);
+
+-- Compatibilite historique: ces valeurs restent necessaires pour le mapping de pieces par type technique existant.
 INSERT INTO Type_demande (libelle)
 SELECT 'investisseur'
 WHERE NOT EXISTS (
@@ -32,6 +57,24 @@ INSERT INTO Statut_demande (libelle)
 SELECT 'terminee'
 WHERE NOT EXISTS (
 	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'terminee'
+);
+
+INSERT INTO Statut_demande (libelle)
+SELECT 'scanne'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'scanne'
+);
+
+INSERT INTO Statut_demande (libelle)
+SELECT 'approuve'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'approuve'
+);
+
+INSERT INTO Statut_demande (libelle)
+SELECT 'rejete'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Statut_demande WHERE lower(libelle) = 'rejete'
 );
 
 INSERT INTO Situation_familiale (libelle)
