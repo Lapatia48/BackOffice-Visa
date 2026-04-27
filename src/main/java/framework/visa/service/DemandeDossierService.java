@@ -7,6 +7,7 @@ import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.Demandeur;
 import framework.visa.entity.DemandeurVisaCarteResident;
+import framework.visa.entity.Etat;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Passeport;
 import framework.visa.entity.StatutDemande;
@@ -18,6 +19,7 @@ import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
 import framework.visa.repository.DemandeurRepository;
 import framework.visa.repository.DemandeurVisaCarteResidentRepository;
+import framework.visa.repository.EtatRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
@@ -43,6 +45,7 @@ import java.util.Set;
 public class DemandeDossierService {
     private static final String STATUS_TERMINEE = "terminee";
     private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
+    private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
     private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final String CARTE_RESIDENT_PREFIX = "CR";
 
@@ -58,6 +61,7 @@ public class DemandeDossierService {
     private final VisaTransformableRepository visaTransformableRepository;
     private final CarteResidentRepository carteResidentRepository;
     private final DemandeurVisaCarteResidentRepository demandeurVisaCarteResidentRepository;
+    private final EtatRepository etatRepository;
     private final CategorieVisaRepository categorieVisaRepository;
     private final VisaConfig visaConfig;
 
@@ -74,6 +78,7 @@ public class DemandeDossierService {
             VisaTransformableRepository visaTransformableRepository,
             CarteResidentRepository carteResidentRepository,
             DemandeurVisaCarteResidentRepository demandeurVisaCarteResidentRepository,
+            EtatRepository etatRepository,
             CategorieVisaRepository categorieVisaRepository,
             VisaConfig visaConfig) {
         this.repository = repository;
@@ -88,6 +93,7 @@ public class DemandeDossierService {
         this.visaTransformableRepository = visaTransformableRepository;
         this.carteResidentRepository = carteResidentRepository;
         this.demandeurVisaCarteResidentRepository = demandeurVisaCarteResidentRepository;
+        this.etatRepository = etatRepository;
         this.categorieVisaRepository = categorieVisaRepository;
         this.visaConfig = visaConfig;
     }
@@ -106,6 +112,15 @@ public class DemandeDossierService {
 
     public Optional<Demande> findDemandeById(Integer demandeId) {
         return demandeRepository.findDetailedById(demandeId);
+    }
+
+    public Optional<Demande> findLatestDemandeByDemandeurId(Integer demandeurId) {
+        if (demandeurId == null) {
+            return Optional.empty();
+        }
+
+        List<Demande> rows = demandeRepository.findDetailedByDemandeurIdOrderByIdDesc(demandeurId);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
     }
 
     public Optional<Passeport> findPasseportByDemandeId(Integer demandeId) {
@@ -183,6 +198,20 @@ public class DemandeDossierService {
 
     public List<DemandeDossier> findByDemandeIds(Collection<Integer> demandeIds) {
         return repository.findByDemandeIdIn(demandeIds);
+    }
+
+    @Transactional
+    public void appendActionHistoriqueByDemandeurId(Integer demandeurId, String commentaire) {
+        if (demandeurId == null || commentaire == null || commentaire.isBlank()) {
+            return;
+        }
+
+        Demande demande = findLatestDemandeByDemandeurId(demandeurId).orElse(null);
+        if (demande == null) {
+            return;
+        }
+
+        appendHistorique(demande, commentaire);
     }
 
     @Transactional
@@ -385,6 +414,8 @@ public class DemandeDossierService {
         carteResident.setNumero(generateNextCarteResidentNumero());
         carteResident.setDateDonnation(visa.getDateDebut() == null ? LocalDate.now() : visa.getDateDebut());
         carteResident.setDateExpiration(visa.getDateFin() == null ? LocalDate.now() : visa.getDateFin());
+        carteResident.setDemandeur(demandeur);
+        carteResident.setEtat(resolveEtat(ETAT_NOUVEAU_TITRE));
         carteResident = carteResidentRepository.save(carteResident);
 
         DemandeurVisaCarteResident link = new DemandeurVisaCarteResident();
@@ -396,7 +427,16 @@ public class DemandeDossierService {
         appendHistorique(demande, "Carte resident creee : " + carteResident.getNumero() + ".");
     }
 
-    private String generateNextCarteResidentNumero() {
+    private Etat resolveEtat(String libelle) {
+        return etatRepository.findFirstByLibelleIgnoreCase(libelle)
+                .orElseGet(() -> {
+                    Etat etat = new Etat();
+                    etat.setLibelle(libelle);
+                    return etatRepository.save(etat);
+                });
+    }
+
+    public String generateNextCarteResidentNumero() {
         int nextNumber = carteResidentRepository.findFirstByOrderByIdDesc()
                 .map(CarteResident::getNumero)
                 .map(this::extractNumeroSequence)

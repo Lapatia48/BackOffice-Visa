@@ -19,6 +19,20 @@ public class CarteResident {
     @Column(name = "date_expiration", nullable = false)
     private LocalDate dateExpiration;
 
+    @ManyToOne
+    @JoinColumn(name = "id_demandeur")
+    private Demandeur demandeur;
+
+    @ManyToOne
+    @JoinColumn(name="id_etat")
+    private Etat etat;
+
+    public Etat getEtat() {
+        return etat;
+    }
+    public void setEtat(Etat etat) {
+        this.etat = etat;
+    }
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -30,4 +44,7 @@ public class CarteResident {
 
     public LocalDate getDateExpiration() { return dateExpiration; }
     public void setDateExpiration(LocalDate dateExpiration) { this.dateExpiration = dateExpiration; }
+
+    public Demandeur getDemandeur() { return demandeur; }
+    public void setDemandeur(Demandeur demandeur) { this.demandeur = demandeur; }
 }

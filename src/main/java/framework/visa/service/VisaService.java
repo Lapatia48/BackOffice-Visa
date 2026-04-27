@@ -14,4 +14,8 @@ public class VisaService {
     public List<Visa> findAll() {
         return repository.findAll();
     }
+
+    public Visa findFirstByDemandeurIdOrderByIdDesc(Integer demandeurId){
+        return repository.findFirstByPasseportDemandeurIdOrderByIdDesc(demandeurId).orElse(null);
+    }
 }

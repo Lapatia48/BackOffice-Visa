@@ -63,7 +63,9 @@ public class NouveauTitreController {
     }
 
     @GetMapping("/nouveau-titre")
-    public String nouveauTitre(Model model) {
+    public String nouveauTitre(
+            Model model,
+            @RequestParam(required = false) String mode) {
         List<TypeDemande> types = dossierService.findAvailableTypes();
         List<Dossier> commonDossiers = dossierService.findCommonDossiers();
         List<SituationFamiliale> situationsFamiliales = situationFamilialeService.findAll();
@@ -79,6 +81,16 @@ public class NouveauTitreController {
         model.addAttribute("typedDossiers", typedDossiers);
         model.addAttribute("situationsFamiliales", situationsFamiliales);
         model.addAttribute("nationalites", nationalites);
+        String modeOperation = resolveModeOperation(mode);
+        boolean modeDuplicata = "duplicata".equals(modeOperation);
+        boolean modeTransfert = "transfert".equals(modeOperation);
+        List<Dossier> operationDossiers = resolveOperationDossiers(types, modeOperation);
+
+        model.addAttribute("modeDuplicata", modeDuplicata);
+        model.addAttribute("modeTransfert", modeTransfert);
+        model.addAttribute("modeOperation", modeOperation);
+        model.addAttribute("carteEtatLibelle", modeDuplicata ? "duplicata" : "nouveau titre");
+        model.addAttribute("operationDossiers", operationDossiers);
         return "nouveau-titre";
     }
 
@@ -104,7 +116,10 @@ public class NouveauTitreController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpirationVisaTransformable,
             @RequestParam Integer typeVisaId,
             @RequestParam(required = false) List<Integer> dossierIds,
+            @RequestParam(required = false) List<Integer> operationDossierIds,
             @RequestParam(required = false) String observations,
+            @RequestParam(required = false) String modeOperation,
+            @RequestParam(required = false) String carteEtatLibelle,
             RedirectAttributes redirectAttributes) {
         try {
                 List<Dossier> requiredDossiers = dossierService.findCommonDossiers().stream()
@@ -123,6 +138,50 @@ public class NouveauTitreController {
 
                 if (hasMissingRequiredDossier) {
                 throw new IllegalArgumentException("Tous les dossiers obligatoires doivent etre coches.");
+                }
+
+                String modeOperationNormalized = resolveModeOperation(modeOperation);
+                if (isSansDonneesMode(modeOperationNormalized)) {
+                    List<Dossier> operationDossiers = resolveOperationDossiers(dossierService.findAvailableTypes(), modeOperationNormalized);
+                    boolean missingRequiredOperationDossier = containsMissingRequiredDossiers(operationDossiers, operationDossierIds);
+                    if (missingRequiredOperationDossier) {
+                        throw new IllegalArgumentException("Tous les dossiers obligatoires du type " + modeOperationNormalized + " doivent etre coches.");
+                    }
+
+                    DemandeWorkflowService.SansDonneesCreationResult result = demandeWorkflowService.submitSansDonneesAnterieures(
+                        modeOperationNormalized,
+                        nom,
+                        prenom,
+                        dateNaissance,
+                        lieuNaissance,
+                        situationFamilialeId,
+                        nationaliteId,
+                        telephone,
+                        email,
+                        adresse,
+                        numeroPasseport,
+                        dateDelivrance,
+                        dateExpiration,
+                        paysDelivrance,
+                        referenceVisaTransformable,
+                        dateArriveeMadagascar,
+                        lieuEntreeMadagascar,
+                        dateDonnationVisaTransformable,
+                        dateExpirationVisaTransformable,
+                        typeVisaId,
+                        dossierIds,
+                        operationDossierIds,
+                        observations,
+                        carteEtatLibelle
+                    );
+
+                    redirectAttributes.addFlashAttribute("message",
+                        "Parcours sans donnees anterieures enregistre: nouveau titre valide + "
+                        + modeOperationNormalized + " cree.");
+                    return "redirect:/sans-donnees/resultat?demandeNouveauTitreId="
+                        + result.getDemandeNouveauTitreId()
+                        + "&demandeOperationId=" + result.getDemandeOperationId()
+                        + "&mode=" + modeOperationNormalized;
                 }
 
             Integer demandeId = demandeWorkflowService.submitNouveauTitre(
@@ -146,13 +205,64 @@ public class NouveauTitreController {
                     dateExpirationVisaTransformable,
                     typeVisaId,
                     dossierIds,
-                    observations
+                    observations,
+                    carteEtatLibelle
             );
             redirectAttributes.addFlashAttribute("message", "Demande #" + demandeId + " enregistree avec succes.");
             return "redirect:/dossiers-en-cours";
         } catch (IllegalArgumentException exception) {
             redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            String modeOperationNormalized = resolveModeOperation(modeOperation);
+            if ("duplicata".equals(modeOperationNormalized)) {
+                return "redirect:/nouveau-titre?mode=duplicata";
+            }
+            if ("transfert".equals(modeOperationNormalized)) {
+                return "redirect:/nouveau-titre?mode=transfert";
+            }
             return "redirect:/nouveau-titre";
+        }
+    }
+
+    @GetMapping("/sans-donnees/resultat")
+    public String afficherResultatSansDonnees(
+            @RequestParam Integer demandeNouveauTitreId,
+            @RequestParam Integer demandeOperationId,
+            @RequestParam String mode,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Demande demandeNouveauTitre = demandeDossierService.findDemandeById(demandeNouveauTitreId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande nouveau titre introuvable."));
+            Demande demandeOperation = demandeDossierService.findDemandeById(demandeOperationId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande operation introuvable."));
+
+            List<DemandeDossier> demandeNouveauTitreDossiers = demandeDossierService.findByDemandeId(demandeNouveauTitreId);
+            List<DemandeDossier> demandeOperationDossiers = demandeDossierService.findByDemandeId(demandeOperationId);
+
+            Integer demandeurId = demandeNouveauTitre.getDemandeur() == null ? null : demandeNouveauTitre.getDemandeur().getId();
+            if (demandeurId == null) {
+                throw new IllegalArgumentException("Demandeur introuvable pour le resultat.");
+            }
+
+            DemandeurVisaCarteResident residentLink = demandeDossierService
+                .findResidentLinksByDemandeurIds(List.of(demandeurId))
+                .get(demandeurId);
+
+            model.addAttribute("mode", resolveModeOperation(mode));
+            model.addAttribute("demandeNouveauTitre", demandeNouveauTitre);
+            model.addAttribute("demandeOperation", demandeOperation);
+            model.addAttribute("demandeNouveauTitreDossiers", demandeNouveauTitreDossiers);
+            model.addAttribute("demandeOperationDossiers", demandeOperationDossiers);
+            model.addAttribute("demandeur", demandeNouveauTitre.getDemandeur());
+            model.addAttribute("passeport", demandeDossierService.findPasseportByDemandeId(demandeNouveauTitreId).orElse(null));
+            model.addAttribute("visaTransformable", demandeDossierService.findVisaTransformableByDemandeId(demandeNouveauTitreId).orElse(null));
+            model.addAttribute("visa", residentLink == null ? demandeNouveauTitre.getVisa() : residentLink.getVisa());
+            model.addAttribute("carte", residentLink == null ? null : residentLink.getCarteResident());
+
+            return "sans-donnees-resultat";
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return "redirect:/nouveau-titre?mode=" + resolveModeOperation(mode);
         }
     }
 
@@ -346,6 +456,53 @@ public class NouveauTitreController {
         return value.trim();
     }
 
+    private String resolveModeOperation(String mode) {
+        if (mode == null || mode.isBlank()) {
+            return "";
+        }
+
+        String normalized = mode.trim().toLowerCase();
+        if ("duplicata".equals(normalized) || "transfert".equals(normalized)) {
+            return normalized;
+        }
+
+        return "";
+    }
+
+    private boolean isSansDonneesMode(String modeOperation) {
+        return "duplicata".equals(modeOperation) || "transfert".equals(modeOperation);
+    }
+
+    private List<Dossier> resolveOperationDossiers(List<TypeDemande> types, String modeOperation) {
+        if (!isSansDonneesMode(modeOperation) || types == null || types.isEmpty()) {
+            return List.of();
+        }
+
+        for (TypeDemande type : types) {
+            if (type == null || type.getLibelle() == null) {
+                continue;
+            }
+
+            String libelle = type.getLibelle().trim().toLowerCase();
+            if (libelle.equals(modeOperation) || ("transfert".equals(modeOperation) && "transfert visa".equals(libelle))) {
+                return dossierService.findDossiersByType(type.getId());
+            }
+        }
+
+        return List.of();
+    }
+
+    private boolean containsMissingRequiredDossiers(List<Dossier> dossiers, List<Integer> selectedDossierIds) {
+        if (dossiers == null || dossiers.isEmpty()) {
+            return false;
+        }
+
+        Set<Integer> selected = selectedDossierIds == null ? Set.of() : new HashSet<>(selectedDossierIds);
+        return dossiers.stream()
+            .filter(Dossier::isObligatoire)
+            .anyMatch(dossier -> !selected.contains(dossier.getId()));
+    }
+
     @GetMapping("/dossiers-en-cours/ajout")
     public String ajoutDossier(@RequestParam Integer demandeId, Model model, RedirectAttributes redirectAttributes) {
         try {
@@ -436,12 +593,17 @@ public class NouveauTitreController {
     }
 
     @GetMapping("/duplicata")
-    public String duplicata() {
+    public String duplicata(Model model) {
+        List<Nationalite> nationalites = nationaliteService.findAll();
+        model.addAttribute("nationalites", nationalites);
+
         return "duplicata";
     }
 
     @GetMapping("/transfert-visa")
-    public String transfertVisa() {
+    public String transfertVisa(Model model) {
+        List<Nationalite> nationalites = nationaliteService.findAll();
+        model.addAttribute("nationalites", nationalites);
         return "transfert-visa";
     }
 

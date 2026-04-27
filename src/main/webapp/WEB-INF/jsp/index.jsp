@@ -14,7 +14,7 @@
 
 <ul>
     <li><a href="/nouveau-titre">Nouveau titre</a></li>
-    <li><a href="/duplicata">Duplicata</a></li>
+    <li><a href="/duplicata">Duplicata carte resident</a></li>
     <li><a href="/transfert-visa">Transfert visa</a></li>
 </ul>
 </body>
