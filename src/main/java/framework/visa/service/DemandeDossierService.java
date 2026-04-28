@@ -5,6 +5,7 @@ import framework.visa.entity.CarteResident;
 import framework.visa.entity.CategorieVisa;
 import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
+import framework.visa.entity.DemandeDossierScan;
 import framework.visa.entity.Demandeur;
 import framework.visa.entity.DemandeurVisaCarteResident;
 import framework.visa.entity.Etat;
@@ -17,6 +18,7 @@ import framework.visa.repository.CarteResidentRepository;
 import framework.visa.repository.CategorieVisaRepository;
 import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
+import framework.visa.repository.DemandeDossierScanRepository;
 import framework.visa.repository.DemandeurRepository;
 import framework.visa.repository.DemandeurVisaCarteResidentRepository;
 import framework.visa.repository.EtatRepository;
@@ -27,9 +29,15 @@ import framework.visa.repository.SituationFamilialeRepository;
 import framework.visa.repository.StatutDemandeRepository;
 import framework.visa.repository.VisaRepository;
 import framework.visa.repository.VisaTransformableRepository;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -44,12 +52,14 @@ import java.util.Set;
 @Service
 public class DemandeDossierService {
     private static final String STATUS_TERMINEE = "terminee";
+    private static final String STATUS_SCANNEE = "scanne";
     private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
     private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
     private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final String CARTE_RESIDENT_PREFIX = "CR";
 
     private final DemandeDossierRepository repository;
+    private final DemandeDossierScanRepository demandeDossierScanRepository;
     private final DemandeRepository demandeRepository;
     private final DemandeurRepository demandeurRepository;
     private final PasseportRepository passeportRepository;
@@ -67,6 +77,7 @@ public class DemandeDossierService {
 
     public DemandeDossierService(
             DemandeDossierRepository repository,
+            DemandeDossierScanRepository demandeDossierScanRepository,
             DemandeRepository demandeRepository,
             DemandeurRepository demandeurRepository,
             PasseportRepository passeportRepository,
@@ -82,6 +93,7 @@ public class DemandeDossierService {
             CategorieVisaRepository categorieVisaRepository,
             VisaConfig visaConfig) {
         this.repository = repository;
+        this.demandeDossierScanRepository = demandeDossierScanRepository;
         this.demandeRepository = demandeRepository;
         this.demandeurRepository = demandeurRepository;
         this.passeportRepository = passeportRepository;
@@ -198,6 +210,31 @@ public class DemandeDossierService {
 
     public List<DemandeDossier> findByDemandeIds(Collection<Integer> demandeIds) {
         return repository.findByDemandeIdIn(demandeIds);
+    }
+
+    public Map<Integer, Map<Integer, String>> findScanFileNamesByDemandeIds(Collection<Integer> demandeIds) {
+        if (demandeIds == null || demandeIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Integer, Map<Integer, String>> scanFilesByDemande = new HashMap<>();
+        List<DemandeDossierScan> scans = demandeDossierScanRepository.findByDemandeIds(demandeIds);
+        for (DemandeDossierScan scan : scans) {
+            if (scan == null || scan.getDemandeDossier() == null) {
+                continue;
+            }
+            DemandeDossier ligne = scan.getDemandeDossier();
+            Integer demandeId = ligne.getDemande() == null ? null : ligne.getDemande().getId();
+            Integer dossierId = ligne.getDossier() == null ? null : ligne.getDossier().getId();
+            if (demandeId == null || dossierId == null) {
+                continue;
+            }
+
+            scanFilesByDemande
+                .computeIfAbsent(demandeId, ignored -> new HashMap<>())
+                .put(dossierId, scan.getCheminFichierAbsolu());
+        }
+        return scanFilesByDemande;
     }
 
     @Transactional
@@ -333,6 +370,77 @@ public class DemandeDossierService {
         } else if (!hasMissing) {
             issueVisaIfNeeded(demande);
             demandeRepository.save(demande);
+        }
+    }
+
+    @Transactional
+    public void uploadDossierScan(Integer demandeId, Integer dossierId, MultipartFile scanFile) {
+        if (demandeId == null) {
+            throw new IllegalArgumentException("Demande introuvable.");
+        }
+        if (dossierId == null) {
+            throw new IllegalArgumentException("Dossier introuvable.");
+        }
+        if (scanFile == null || scanFile.isEmpty()) {
+            throw new IllegalArgumentException("Le fichier PDF est obligatoire.");
+        }
+        if (!isPdf(scanFile)) {
+            throw new IllegalArgumentException("Seuls les fichiers PDF sont autorises.");
+        }
+
+        Demande demande = demandeRepository.findDetailedById(demandeId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+        String statut = demande.getStatut() == null || demande.getStatut().getLibelle() == null
+                ? ""
+                : demande.getStatut().getLibelle().trim();
+        if (STATUS_SCANNEE.equalsIgnoreCase(statut)) {
+            throw new IllegalArgumentException("Cette demande est deja scannee et n'est plus modifiable.");
+        }
+        if (!STATUS_TERMINEE.equalsIgnoreCase(statut)) {
+            throw new IllegalArgumentException("Seules les demandes terminees peuvent etre scannees.");
+        }
+
+        DemandeDossier ligne = repository.findFirstByDemandeIdAndDossierId(demandeId, dossierId)
+                .orElseThrow(() -> new IllegalArgumentException("Le dossier selectionne n'appartient pas a cette demande."));
+
+        DemandeDossierScan scan = demandeDossierScanRepository.findByDemandeDossierId(ligne.getId())
+                .orElseGet(DemandeDossierScan::new);
+        scan.setDemandeDossier(ligne);
+        String nomFichier = sanitizeFileName(scanFile.getOriginalFilename());
+        Path cheminFichier = resolveScanFilePath(demandeId, dossierId, nomFichier);
+        try {
+            Files.createDirectories(cheminFichier.getParent());
+            try (InputStream inputStream = scanFile.getInputStream()) {
+                Files.copy(inputStream, cheminFichier, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Impossible d'enregistrer le fichier PDF sur disque.");
+        }
+        scan.setCheminFichierAbsolu(cheminFichier.toAbsolutePath().toString());
+        scan.setNomFichier(nomFichier);
+        scan.setTypeMime(scanFile.getContentType());
+        scan.setDateScan(LocalDateTime.now());
+        demandeDossierScanRepository.save(scan);
+
+        appendHistorique(demande, "Scan de piece justificative : " + ligne.getDossier().getLibelle() + ".");
+
+        List<DemandeDossier> lignes = repository.findByDemandeIdOrderByDossierLibelleAsc(demandeId);
+        Set<Integer> scannedDossierIds = new HashSet<>(demandeDossierScanRepository.findScannedDossierIdsByDemandeId(demandeId));
+        boolean allScanned = !lignes.isEmpty() && lignes.stream()
+            .map(ligneDemande -> ligneDemande.getDossier() == null ? null : ligneDemande.getDossier().getId())
+            .filter(java.util.Objects::nonNull)
+            .allMatch(scannedDossierIds::contains);
+        if (allScanned) {
+            StatutDemande scanne = getOrCreateStatus(STATUS_SCANNEE);
+            demande.setStatut(scanne);
+            demandeRepository.save(demande);
+
+            HistoStatutDemande historique = new HistoStatutDemande();
+            historique.setDemande(demande);
+            historique.setStatut(scanne);
+            historique.setDateChangement(LocalDateTime.now());
+            historique.setCommentaire("Tous les scans des pieces justificatives sont completes.");
+            histoStatutDemandeRepository.save(historique);
         }
     }
 
@@ -579,6 +687,34 @@ public class DemandeDossierService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean isPdf(MultipartFile file) {
+        if (file == null) {
+            return false;
+        }
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        boolean mimePdf = contentType != null && contentType.toLowerCase().contains("pdf");
+        boolean extensionPdf = originalFilename != null && originalFilename.toLowerCase().endsWith(".pdf");
+        return mimePdf || extensionPdf;
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "scan.pdf";
+        }
+        return fileName.replace("\\", "_").replace("/", "_").trim();
+    }
+
+    private Path resolveScanFilePath(Integer demandeId, Integer dossierId, String nomFichier) {
+        String safeNom = sanitizeFileName(nomFichier);
+        if (!safeNom.toLowerCase().endsWith(".pdf")) {
+            safeNom = safeNom + ".pdf";
+        }
+        Path baseDir = Path.of(System.getProperty("user.home"), "visa-scans");
+        Path demandeDir = baseDir.resolve("demande-" + demandeId);
+        return demandeDir.resolve("dossier-" + dossierId + "-" + safeNom);
     }
 
     private StatutDemande getOrCreateStatus(String libelle) {

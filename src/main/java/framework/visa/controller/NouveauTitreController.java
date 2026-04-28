@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
@@ -302,6 +303,18 @@ public class NouveauTitreController {
     @GetMapping("/dossier-terminee")
     public String dossierTerminee(Model model) {
         List<Demande> dossiersTerminees = demandeDossierService.findDossiersTermineesNouveauTitre();
+        List<Dossier> commonDossiers = dossierService.findCommonDossiers();
+        Set<Integer> typeIds = dossiersTerminees.stream()
+            .map(Demande::getTypeDemande)
+            .filter(java.util.Objects::nonNull)
+            .map(TypeDemande::getId)
+            .filter(java.util.Objects::nonNull)
+            .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+        Map<Integer, List<Dossier>> typedDossiers = new LinkedHashMap<>();
+        for (Integer typeId : typeIds) {
+            typedDossiers.put(typeId, dossierService.findDossiersByType(typeId));
+        }
+
         List<Integer> demandeurIds = dossiersTerminees.stream()
             .map(Demande::getDemandeur)
             .filter(java.util.Objects::nonNull)
@@ -312,11 +325,37 @@ public class NouveauTitreController {
             demandeDossierService.findResidentLinksByDemandeurIds(demandeurIds);
         Map<Integer, List<HistoStatutDemande>> historiquesByDemandeurId =
             demandeDossierService.findHistoriquesByDemandeurIds(demandeurIds);
+        List<Integer> demandeIds = dossiersTerminees.stream()
+            .map(Demande::getId)
+            .filter(java.util.Objects::nonNull)
+            .toList();
+        Map<Integer, Map<Integer, String>> scanFilesByDemandeAndDossier =
+            demandeDossierService.findScanFileNamesByDemandeIds(demandeIds);
 
         model.addAttribute("residentDetailsByDemande", buildResidentDetailsByDemande(dossiersTerminees, residentLinkByDemandeurId));
         model.addAttribute("historiquesByDemande", buildHistoriquesByDemande(dossiersTerminees, historiquesByDemandeurId));
+        model.addAttribute("scanFilesByDemandeAndDossier", scanFilesByDemandeAndDossier);
+        model.addAttribute("commonDossiers", commonDossiers);
+        model.addAttribute("typedDossiers", typedDossiers);
         model.addAttribute("dossiersTerminees", dossiersTerminees);
         return "dossier-terminee";
+    }
+
+    @PostMapping("/dossier-terminee/scanner")
+    public String scannerPieceDossierTerminee(
+            @RequestParam Integer demandeId,
+            @RequestParam Integer dossierId,
+            @RequestParam("scanFile") MultipartFile scanFile,
+            RedirectAttributes redirectAttributes) {
+        try {
+            demandeDossierService.uploadDossierScan(demandeId, dossierId, scanFile);
+            redirectAttributes.addFlashAttribute("message", "Scan enregistre avec succes.");
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+        } catch (Exception exception) {
+            redirectAttributes.addFlashAttribute("error", "Erreur technique pendant le scan: " + exception.getMessage());
+        }
+        return "redirect:/dossier-terminee?openModal=justificatif&demandeId=" + demandeId;
     }
 
     private Map<Integer, Map<String, String>> buildResidentDetailsByDemande(

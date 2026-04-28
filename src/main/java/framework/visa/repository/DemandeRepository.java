@@ -53,7 +53,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 		join fetch d.visa visa
 		left join fetch visa.passeport passeport
 		join fetch visa.categorieVisa categorie
-		where lower(statut.libelle) = 'terminee'
+		where lower(statut.libelle) in ('terminee', 'scanne')
 			and lower(categorie.libelle) in ('nouveau_titre', 'nouveau titre')
 		order by visa.dateDebut desc, d.id desc
 	""")
