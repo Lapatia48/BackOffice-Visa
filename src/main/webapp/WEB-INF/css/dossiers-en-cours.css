@@ -165,6 +165,8 @@ tbody tr:hover {
     inset: 0;
     display: none;
     z-index: 1200;
+    overflow-y: auto;
+    padding: 1rem 0;
 }
 
 .resident-modal.is-open {
@@ -188,6 +190,15 @@ tbody tr:hover {
     box-shadow: 0 28px 60px rgba(34, 41, 38, 0.35);
     padding: 1.25rem;
     animation: resident-pop 0.2s ease;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.btn-scanned {
+    background: #4f8f6e;
+    cursor: default;
+    opacity: 0.95;
+    margin-top: 0.4rem;
 }
 
 .resident-modal-close {
@@ -211,6 +222,18 @@ tbody tr:hover {
 .resident-modal h2 {
     margin: 0 2.1rem 0.9rem 0;
     font-size: 1.2rem;
+}
+
+#justificatifModal .resident-modal-card {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#justificatifModalBody {
+    overflow-y: auto;
+    max-height: calc(88vh - 6rem);
+    padding-right: 0.25rem;
 }
 
 .resident-detail-templates {

@@ -149,3 +149,15 @@ ON Demande_dossier(id_demande, id_dossier);
 
 CREATE INDEX ix_demande_dossier_demande ON Demande_dossier(id_demande);
 CREATE INDEX ix_demande_dossier_dossier ON Demande_dossier(id_dossier);
+
+CREATE TABLE Demande_dossier_scan (
+    id SERIAL PRIMARY KEY,
+    id_demande_dossier INT NOT NULL REFERENCES Demande_dossier(id),
+    chemin_fichier_absolu VARCHAR(1000) NOT NULL,
+    nom_fichier VARCHAR(255),
+    type_mime VARCHAR(100),
+    date_scan TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX ux_demande_dossier_scan_unique
+ON Demande_dossier_scan(id_demande_dossier);
