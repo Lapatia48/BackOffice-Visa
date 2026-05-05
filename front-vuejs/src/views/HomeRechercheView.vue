@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import DemandeurResult from '../components/DemandeurResult.vue'
 import SearchInputModal from '../components/SearchInputModal.vue'
 
@@ -10,6 +11,7 @@ const loading = ref(false)
 const error = ref('')
 const searchType = ref<SearchType>('passeport')
 const result = ref<any | null>(null)
+const route = useRoute()
 
 const modalTitle = computed(() => {
   if (searchType.value === 'passeport') return 'Chercher par numéro de passeport'
@@ -51,12 +53,47 @@ async function submitSearch(value: string) {
     loading.value = false
   }
 }
+
+async function loadDemandFromQuery() {
+  const demandeId = route.query.demandeId
+  if (!demandeId) {
+    return
+  }
+
+  searchType.value = 'demande'
+  loading.value = true
+  error.value = ''
+
+  try {
+    const res = await fetch(`/api/demandeurs/demande/${encodeURIComponent(String(demandeId))}`)
+    const bodyText = await res.text()
+
+    if (!res.ok) {
+      const maybeJson = bodyText ? JSON.parse(bodyText) : null
+      throw new Error(maybeJson?.message || `Erreur HTTP ${res.status}`)
+    }
+
+    result.value = bodyText ? JSON.parse(bodyText) : null
+  } catch (e: any) {
+    error.value = e.message || 'Erreur de chargement depuis le QR code'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadDemandFromQuery()
+})
 </script>
 
 <template>
   <section class="home-card">
     <h2>Accueil recherche demandeur</h2>
     <p class="subtitle">Sélectionnez une recherche, saisissez la valeur dans le popup, puis consultez les données structurées.</p>
+
+    <p v-if="result && searchType === 'demande' && !open" class="subtitle qr-note">
+      Résultat chargé depuis le QR code.
+    </p>
 
     <div class="links-grid">
       <button class="search-link" @click="openPopup('passeport')">
