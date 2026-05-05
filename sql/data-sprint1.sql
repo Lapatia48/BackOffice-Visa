@@ -17,9 +17,9 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO Type_demande (libelle)
-SELECT 'nouveau_titre'
+SELECT 'nouveau titre'
 WHERE NOT EXISTS (
-	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'nouveau_titre'
+	SELECT 1 FROM Type_demande WHERE lower(libelle) IN ('nouveau titre', 'nouveau_titre')
 );
 
 INSERT INTO Type_demande (libelle)
@@ -32,19 +32,6 @@ INSERT INTO Type_demande (libelle)
 SELECT 'transfert'
 WHERE NOT EXISTS (
 	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'transfert'
-);
-
--- Compatibilite historique: ces valeurs restent necessaires pour le mapping de pieces par type technique existant.
-INSERT INTO Type_demande (libelle)
-SELECT 'investisseur'
-WHERE NOT EXISTS (
-	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'investisseur'
-);
-
-INSERT INTO Type_demande (libelle)
-SELECT 'travailleur'
-WHERE NOT EXISTS (
-	SELECT 1 FROM Type_demande WHERE lower(libelle) = 'travailleur'
 );
 
 INSERT INTO Statut_demande (libelle)
@@ -165,7 +152,7 @@ INSERT INTO Dossiers (libelle, obligatoire)
 SELECT 'Attestation d''emploi delivre par l''employeur (Original)', TRUE
 WHERE NOT EXISTS (SELECT 1 FROM Dossiers WHERE libelle = 'Attestation d''emploi delivre par l''employeur (Original)');
 
-INSERT INTO Dossier_type_visa (id_dossier, id_type_visa)
+INSERT INTO Dossier_type_visa (id_dossier, id_categorie_visa)
 SELECT d.id, NULL
 FROM Dossiers d
 WHERE d.libelle IN (
@@ -181,13 +168,13 @@ WHERE d.libelle IN (
 AND NOT EXISTS (
 	SELECT 1 FROM Dossier_type_visa dtv
 	WHERE dtv.id_dossier = d.id
-	  AND dtv.id_type_visa IS NULL
+	  AND dtv.id_categorie_visa IS NULL
 );
 
-INSERT INTO Dossier_type_visa (id_dossier, id_type_visa)
+INSERT INTO Dossier_type_visa (id_dossier, id_categorie_visa)
 SELECT d.id, td.id
 FROM Dossiers d
-JOIN Type_demande td ON lower(td.libelle) = 'investisseur'
+JOIN Categorie_visa td ON lower(td.libelle) = 'investisseur'
 WHERE d.libelle IN (
 	'Statut de la Societe',
 	'Extrait d''inscription au registre de commerce',
@@ -196,13 +183,13 @@ WHERE d.libelle IN (
 AND NOT EXISTS (
 	SELECT 1 FROM Dossier_type_visa dtv
 	WHERE dtv.id_dossier = d.id
-	  AND dtv.id_type_visa = td.id
+	  AND dtv.id_categorie_visa = td.id
 );
 
-INSERT INTO Dossier_type_visa (id_dossier, id_type_visa)
+INSERT INTO Dossier_type_visa (id_dossier, id_categorie_visa)
 SELECT d.id, td.id
 FROM Dossiers d
-JOIN Type_demande td ON lower(td.libelle) = 'travailleur'
+JOIN Categorie_visa td ON lower(td.libelle) = 'travailleur'
 WHERE d.libelle IN (
 	'Autorisation emploi delivree a Madagascar par le Ministere de la Fonction publique',
 	'Attestation d''emploi delivre par l''employeur (Original)'
@@ -210,6 +197,6 @@ WHERE d.libelle IN (
 AND NOT EXISTS (
 	SELECT 1 FROM Dossier_type_visa dtv
 	WHERE dtv.id_dossier = d.id
-	  AND dtv.id_type_visa = td.id
+	  AND dtv.id_categorie_visa = td.id
 );
 

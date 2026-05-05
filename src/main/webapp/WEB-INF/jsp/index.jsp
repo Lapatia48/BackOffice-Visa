@@ -16,6 +16,7 @@
     <li><a href="/nouveau-titre">Nouveau titre</a></li>
     <li><a href="/duplicata">Duplicata carte resident</a></li>
     <li><a href="/transfert-visa">Transfert visa</a></li>
+    <li><a href="/demandes">Liste des demandes (tous statuts)</a></li>
 </ul>
 </body>
 </html>

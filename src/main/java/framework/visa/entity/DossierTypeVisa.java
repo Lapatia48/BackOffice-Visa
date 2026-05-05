@@ -14,14 +14,14 @@ public class DossierTypeVisa {
     private Dossier dossier;
 
     @ManyToOne
-    @JoinColumn(name = "id_type_visa")
-    private TypeDemande typeVisa;
+    @JoinColumn(name = "id_categorie_visa")
+    private CategorieVisa categorieVisa;
 
     // Getters and setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public Dossier getDossier() { return dossier; }
     public void setDossier(Dossier dossier) { this.dossier = dossier; }
-    public TypeDemande getTypeVisa() { return typeVisa; }
-    public void setTypeVisa(TypeDemande typeVisa) { this.typeVisa = typeVisa; }
+    public CategorieVisa getTypeVisa() { return categorieVisa; }
+    public void setTypeVisa(CategorieVisa categorieVisa) { this.categorieVisa = categorieVisa; }
 }

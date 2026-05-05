@@ -42,15 +42,15 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM Dossiers WHERE libelle = 'Declaration de perte de la carte de resident'
 );
 
-INSERT INTO Dossier_type_visa (id_dossier, id_type_visa)
+INSERT INTO Dossier_type_visa (id_dossier, id_categorie_visa)
 SELECT d.id, td.id
 FROM Dossiers d
-JOIN Type_demande td ON lower(td.libelle) = 'duplicata'
+JOIN Categorie_visa td ON lower(td.libelle) = 'duplicata'
 WHERE d.libelle = 'Declaration de perte de la carte de resident'
 AND NOT EXISTS (
 	SELECT 1 FROM Dossier_type_visa dtv
 	WHERE dtv.id_dossier = d.id
-	  AND dtv.id_type_visa = td.id
+	  AND dtv.id_categorie_visa = td.id
 );
 
 CREATE TABLE IF NOT EXISTS Demande_dossier_scan (

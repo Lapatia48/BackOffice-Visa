@@ -8,8 +8,33 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>BackOffice Visa - Dossiers en cours</title>
+    <title>BackOffice Visa - Liste des demandes</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/css/dossiers-en-cours.css">
+    <style>
+        .statut-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .statut-nav a {
+            padding: 8px 16px;
+            text-decoration: none;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .statut-nav a:hover {
+            background-color: #e0e0e0;
+        }
+        .statut-nav a.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
 <%
@@ -35,16 +60,20 @@
 
     String message = (String) request.getAttribute("message");
     String error = (String) request.getAttribute("error");
+    String statutFiltre = (String) request.getAttribute("statutFiltre");
+    if (statutFiltre == null) {
+        statutFiltre = "tous";
+    }
 
     DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 %>
 
-<h1>Dossiers en cours</h1>
+<h1>Liste des demandes</h1>
 
 <div class="horizontal-sidebar">
     <a href="/">Retour accueil</a>
     <a href="${pageContext.request.contextPath}/nouveau-titre">Nouveau titre</a>
-    <a href="${pageContext.request.contextPath}/dossiers-en-cours">Dossiers en cours</a>
+    <a href="${pageContext.request.contextPath}/dossiers-en-cours">Liste des demandes</a>
     <a href="${pageContext.request.contextPath}/dossier-terminee">Nouveaux titres</a>
 </div>
 
@@ -55,6 +84,18 @@
 <% if (error != null && !error.isEmpty()) { %>
 <p class="error"><%= error %></p>
 <% } %>
+
+<div class="bloc">
+    <h2 class="section-title">Filtrer par statut</h2>
+    <div class="statut-nav">
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours" <%= "tous".equals(statutFiltre) ? "class=\"active\"" : "" %>>Tous les statuts</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=cree" <%= "cree".equals(statutFiltre) ? "class=\"active\"" : "" %>>Créée</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=terminee" <%= "terminee".equals(statutFiltre) ? "class=\"active\"" : "" %>>Terminée</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=scanne" <%= "scanne".equals(statutFiltre) ? "class=\"active\"" : "" %>>Scannée</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=approuve" <%= "approuve".equals(statutFiltre) ? "class=\"active\"" : "" %>>Approuvée</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=rejete" <%= "rejete".equals(statutFiltre) ? "class=\"active\"" : "" %>>Rejetée</a>
+    </div>
+</div>
 
 <div class="bloc filtres">
     <h2 class="section-title">Filtrer les demandes</h2>
@@ -128,6 +169,9 @@
                 <a class="btn-action" href="${pageContext.request.contextPath}/dossiers-en-cours/ajout?demandeId=<%= demandeId %>">
                     Ajout dossier
                 </a>
+                <a class="btn-action" style="margin-left:8px" href="${pageContext.request.contextPath}/demande/<%= demandeId %>">
+                    Voir
+                </a>
             </td>
         </tr>
         <% } %>
@@ -135,7 +179,7 @@
     </table>
 
     <% if (demandesEnCours.isEmpty()) { %>
-    <p class="empty">Aucune demande creee pour le moment.</p>
+    <p class="empty">Aucune demande avec le statut sélectionné pour le moment.</p>
     <% } %>
 </div>
 

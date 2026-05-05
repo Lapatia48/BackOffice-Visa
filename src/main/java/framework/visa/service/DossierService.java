@@ -1,5 +1,6 @@
 package framework.visa.service;
 
+import framework.visa.entity.CategorieVisa;
 import framework.visa.entity.Dossier;
 import framework.visa.entity.TypeDemande;
 import framework.visa.repository.DossierRepository;
@@ -30,7 +31,7 @@ public class DossierService {
         return dossierTypeVisaRepository.findDossiersByTypeId(typeId);
     }
 
-    public List<TypeDemande> findAvailableTypes() {
-        return dossierTypeVisaRepository.findDistinctTypes();
+    public List<CategorieVisa> findAvailableCategories() {
+        return dossierTypeVisaRepository.findDistinctCategory();
     }
 }

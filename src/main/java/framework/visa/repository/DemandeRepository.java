@@ -58,4 +58,23 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 		order by visa.dateDebut desc, d.id desc
 	""")
 	List<Demande> findDossiersTermineesNouveauTitre();
+
+	@Query("""
+		select d from Demande d
+		join fetch d.demandeur demandeur
+		join fetch d.typeDemande typeDemande
+		join fetch d.statut statut
+		where lower(statut.libelle) = lower(:statutLibelle)
+		order by d.dateDemande desc, d.id desc
+	""")
+	List<Demande> findByStatutLibelle(@Param("statutLibelle") String statutLibelle);
+
+	@Query("""
+		select d from Demande d
+		join fetch d.demandeur demandeur
+		join fetch d.typeDemande typeDemande
+		join fetch d.statut statut
+		order by d.dateDemande desc, d.id desc
+	""")
+	List<Demande> findAllDemandes();
 }

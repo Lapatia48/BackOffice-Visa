@@ -122,6 +122,14 @@ public class DemandeDossierService {
         return demandeRepository.findDossiersTermineesNouveauTitre();
     }
 
+    public List<Demande> findDemandesByStatut(String statutLibelle) {
+        return demandeRepository.findByStatutLibelle(statutLibelle);
+    }
+
+    public List<Demande> findAllDemandes() {
+        return demandeRepository.findAllDemandes();
+    }
+
     public Optional<Demande> findDemandeById(Integer demandeId) {
         return demandeRepository.findDetailedById(demandeId);
     }
