@@ -1,0 +1,23 @@
+/* Cream + brown global theme */
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: radial-gradient(circle at top left, #fff4df 0%, #f2dfc2 45%, #ecd4b1 100%);
+  color: #4b2f1a;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.container {
+  padding: 20px;
+}

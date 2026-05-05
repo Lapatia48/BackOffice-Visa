@@ -12,4 +12,6 @@ public interface CarteResidentRepository extends JpaRepository<CarteResident, In
 
     Optional<CarteResident> findFirstByDemandeurIdOrderByIdDesc(Integer demandeurId);
 
+    Optional<CarteResident> findFirstByNumeroIgnoreCaseOrderByIdDesc(String numero);
+
 }

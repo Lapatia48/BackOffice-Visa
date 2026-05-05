@@ -143,6 +143,14 @@ public class DemandeDossierService {
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
     }
 
+    public List<Demande> findDemandesByDemandeurId(Integer demandeurId) {
+        if (demandeurId == null) {
+            return List.of();
+        }
+
+        return demandeRepository.findDetailedByDemandeurIdOrderByIdDesc(demandeurId);
+    }
+
     public Optional<Passeport> findPasseportByDemandeId(Integer demandeId) {
         return demandeRepository.findDetailedById(demandeId)
                 .map(Demande::getDemandeur)
