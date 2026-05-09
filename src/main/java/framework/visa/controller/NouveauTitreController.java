@@ -9,6 +9,7 @@ import framework.visa.entity.Dossier;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Nationalite;
 import framework.visa.entity.SituationFamiliale;
+import framework.visa.entity.Sexe;
 import framework.visa.entity.StatutDemande;
 import framework.visa.entity.TypeDemande;
 import framework.visa.entity.Visa;
@@ -18,6 +19,8 @@ import framework.visa.service.DossierService;
 import framework.visa.service.CategorieVisaService;
 import framework.visa.service.NationaliteService;
 import framework.visa.service.SituationFamilialeService;
+import framework.visa.service.SexeService;
+import framework.visa.service.DemandeurPhotoSignatureService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,6 +49,8 @@ public class NouveauTitreController {
     private final DemandeWorkflowService demandeWorkflowService;
     private final DemandeDossierService demandeDossierService;
     private final SituationFamilialeService situationFamilialeService;
+    private final SexeService sexeService;
+    private final DemandeurPhotoSignatureService demandeurPhotoSignatureService;
     private final NationaliteService nationaliteService;
     private final CategorieVisaService categorieVisaService;
 
@@ -54,12 +59,16 @@ public class NouveauTitreController {
             DemandeWorkflowService demandeWorkflowService,
             DemandeDossierService demandeDossierService,
             SituationFamilialeService situationFamilialeService,
+            SexeService sexeService,
+            DemandeurPhotoSignatureService demandeurPhotoSignatureService,
             NationaliteService nationaliteService,
             CategorieVisaService categorieService) {
         this.dossierService = dossierService;
         this.demandeWorkflowService = demandeWorkflowService;
         this.demandeDossierService = demandeDossierService;
         this.situationFamilialeService = situationFamilialeService;
+        this.sexeService = sexeService;
+        this.demandeurPhotoSignatureService = demandeurPhotoSignatureService;
         this.nationaliteService = nationaliteService;
         this.categorieVisaService=categorieService;
 
@@ -76,6 +85,7 @@ public class NouveauTitreController {
             @RequestParam(required = false) String mode) {
         List<Dossier> commonDossiers = dossierService.findCommonDossiers();
         List<SituationFamiliale> situationsFamiliales = situationFamilialeService.findAll();
+        List<Sexe> sexes = sexeService.findAll();
         List<Nationalite> nationalites = nationaliteService.findAll();
 
         List<CategorieVisa> categorieVisa = categorieVisaService.findAll();
@@ -89,6 +99,7 @@ public class NouveauTitreController {
         model.addAttribute("commonDossiers", commonDossiers);
         model.addAttribute("typedDossiers", typedDossiers);
         model.addAttribute("situationsFamiliales", situationsFamiliales);
+        model.addAttribute("sexes", sexes);
         model.addAttribute("nationalites", nationalites);
         String modeOperation = resolveModeOperation(mode);
         boolean modeDuplicata = "duplicata".equals(modeOperation);
@@ -109,6 +120,7 @@ public class NouveauTitreController {
             @RequestParam String prenom,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
             @RequestParam String lieuNaissance,
+            @RequestParam Integer sexeId,
             @RequestParam Integer situationFamilialeId,
             @RequestParam Integer nationaliteId,
             @RequestParam String telephone,
@@ -163,6 +175,7 @@ public class NouveauTitreController {
                         prenom,
                         dateNaissance,
                         lieuNaissance,
+                        sexeId,
                         situationFamilialeId,
                         nationaliteId,
                         telephone,
@@ -198,6 +211,7 @@ public class NouveauTitreController {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    sexeId,
                     situationFamilialeId,
                     nationaliteId,
                     telephone,
@@ -229,6 +243,69 @@ public class NouveauTitreController {
             if ("transfert".equals(modeOperationNormalized)) {
                 return "redirect:/nouveau-titre?mode=transfert";
             }
+            return "redirect:/nouveau-titre";
+        }
+    }
+
+    @PostMapping("/nouveau-titre/avec-photo-signature")
+    public String submitNouveauTitreAvecPhotoSignature(
+            @RequestParam String nom,
+            @RequestParam String prenom,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
+            @RequestParam String lieuNaissance,
+            @RequestParam Integer sexeId,
+            @RequestParam Integer situationFamilialeId,
+            @RequestParam Integer nationaliteId,
+            @RequestParam String telephone,
+            @RequestParam String email,
+            @RequestParam String adresse,
+            @RequestParam String numeroPasseport,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDelivrance,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpiration,
+            @RequestParam String paysDelivrance,
+            @RequestParam String referenceVisaTransformable,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateArriveeMadagascar,
+            @RequestParam String lieuEntreeMadagascar,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDonnationVisaTransformable,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateExpirationVisaTransformable,
+            @RequestParam Integer categorieVisaId,
+            @RequestParam(required = false) List<Integer> dossierIds,
+            @RequestParam(required = false) List<Integer> operationDossierIds,
+            @RequestParam(required = false) String observations,
+            @RequestParam(required = false) String modeOperation,
+            @RequestParam(required = false) String carteEtatLibelle,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Integer demandeId = demandeWorkflowService.submitNouveauTitre(
+                    nom,
+                    prenom,
+                    dateNaissance,
+                    lieuNaissance,
+                    sexeId,
+                    situationFamilialeId,
+                    nationaliteId,
+                    telephone,
+                    email,
+                    adresse,
+                    numeroPasseport,
+                    dateDelivrance,
+                    dateExpiration,
+                    paysDelivrance,
+                    referenceVisaTransformable,
+                    dateArriveeMadagascar,
+                    lieuEntreeMadagascar,
+                    dateDonnationVisaTransformable,
+                    dateExpirationVisaTransformable,
+                    categorieVisaId,
+                    dossierIds,
+                    observations,
+                    modeOperation,
+                    carteEtatLibelle
+            );
+            redirectAttributes.addFlashAttribute("message", "Demande #" + demandeId + " creee. Ajoutez maintenant la photo et la signature.");
+            return "redirect:/demandeur-media?demandeId=" + demandeId + "&source=creation";
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
             return "redirect:/nouveau-titre";
         }
     }
@@ -276,6 +353,48 @@ public class NouveauTitreController {
         }
     }
 
+    @GetMapping("/demandeur-media")
+    public String demandeurMedia(
+            @RequestParam Integer demandeId,
+            @RequestParam(required = false, defaultValue = "list") String source,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            Demande demande = demandeDossierService.findDemandeById(demandeId)
+                    .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            if (demandeurId == null) {
+                throw new IllegalArgumentException("Demandeur introuvable pour cette demande.");
+            }
+
+            model.addAttribute("demande", demande);
+            model.addAttribute("media", demandeurPhotoSignatureService.findByDemandeurId(demandeurId).orElse(null));
+            model.addAttribute("source", source);
+            model.addAttribute("returnUrl", buildMediaReturnUrl(source, demandeId));
+            return "demandeur-media";
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return "redirect:/dossiers-en-cours";
+        }
+    }
+
+    @PostMapping("/demandeur-media")
+    public String saveDemandeurMedia(
+            @RequestParam Integer demandeId,
+            @RequestParam String photo,
+            @RequestParam String signature,
+            @RequestParam(required = false, defaultValue = "list") String source,
+            RedirectAttributes redirectAttributes) {
+        try {
+            demandeurPhotoSignatureService.saveMedia(demandeId, photo, signature);
+            redirectAttributes.addFlashAttribute("message", "Photo et signature enregistrees pour la demande #" + demandeId + ".");
+            return "redirect:" + buildMediaReturnUrl(source, demandeId);
+        } catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute("error", exception.getMessage());
+            return "redirect:/demandeur-media?demandeId=" + demandeId + "&source=" + source;
+        }
+    }
+
     @GetMapping("/dossiers-en-cours")
     public String dossierEnCours(
             @RequestParam(required = false) String statut,
@@ -296,6 +415,12 @@ public class NouveauTitreController {
             List<Integer> demandeIds = demandes.stream()
                     .map(Demande::getId)
                     .toList();
+            List<Integer> demandeurIds = demandes.stream()
+                .map(Demande::getDemandeur)
+                .filter(java.util.Objects::nonNull)
+                .map(demandeur -> demandeur.getId())
+                .filter(java.util.Objects::nonNull)
+                .toList();
 
             List<DemandeDossier> lignes = demandeDossierService.findByDemandeIds(demandeIds);
             for (DemandeDossier ligne : lignes) {
@@ -308,6 +433,11 @@ public class NouveauTitreController {
                     remainingPiecesByDemande.merge(demandeId, 1L, Long::sum);
                 }
             }
+
+            model.addAttribute(
+                    "mediaCompletionByDemandeurId",
+                    demandeurPhotoSignatureService.findCompletionByDemandeurIds(demandeurIds)
+            );
         }
 
         model.addAttribute("demandesEnCours", demandes);
@@ -476,6 +606,19 @@ public class NouveauTitreController {
         return detailsByDemande;
     }
 
+    private String buildMediaReturnUrl(String source, Integer demandeId) {
+        if (source == null || source.isBlank() || demandeId == null) {
+            return "/dossiers-en-cours";
+        }
+
+        String normalizedSource = source.trim().toLowerCase();
+        if ("details".equals(normalizedSource)) {
+            return "/demande/" + demandeId;
+        }
+
+        return "/dossiers-en-cours";
+    }
+
     private String resolveStatutLabel(String statutLibelle) {
         if (statutLibelle == null || statutLibelle.isBlank()) {
             return "Statut non renseigne";
@@ -484,6 +627,9 @@ public class NouveauTitreController {
         String normalized = statutLibelle.trim().toLowerCase();
         if ("cree".equals(normalized) || "en_cours".equals(normalized)) {
             return "Dossier cree";
+        }
+        if ("photo et signature termines".equals(normalized)) {
+            return "Photo et signature termines";
         }
         if ("terminee".equals(normalized)) {
             return "Dossier terminee";
@@ -590,6 +736,7 @@ public class NouveauTitreController {
             model.addAttribute("visaTransformable", demandeDossierService.findVisaTransformableByDemandeId(demandeId).orElse(null));
             model.addAttribute("dossiersRestants", dossiersRestants);
             model.addAttribute("situationsFamiliales", situationFamilialeService.findAll());
+            model.addAttribute("sexes", sexeService.findAll());
             model.addAttribute("nationalites", nationaliteService.findAll());
             return "ajout-dossier";
         } catch (IllegalArgumentException exception) {
@@ -626,6 +773,7 @@ public class NouveauTitreController {
             model.addAttribute("visa", demande.getVisa());
             DemandeurVisaCarteResident residentLink = residentLinkByDemandeurId.get(demandeurId);
             model.addAttribute("carte", residentLink == null ? null : residentLink.getCarteResident());
+            model.addAttribute("demandeurMedia", demandeurPhotoSignatureService.findByDemandeurId(demandeurId).orElse(null));
             List<Map<String, String>> historiques = buildHistoriquesByDemande(List.of(demande), historiquesByDemandeurId).get(demandeId);
             model.addAttribute("historiques", historiques == null ? List.of() : historiques);
             model.addAttribute("scanFiles", scanFilesByDemandeAndDossier.getOrDefault(demandeId, Map.of()));
@@ -646,6 +794,7 @@ public class NouveauTitreController {
             @RequestParam(required = false) String prenom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateNaissance,
             @RequestParam(required = false) String lieuNaissance,
+            @RequestParam(required = false) Integer sexeId,
             @RequestParam(required = false) Integer situationFamilialeId,
             @RequestParam(required = false) Integer nationaliteId,
             @RequestParam(required = false) String telephone,
@@ -670,6 +819,7 @@ public class NouveauTitreController {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    sexeId,
                     situationFamilialeId,
                     nationaliteId,
                     telephone,

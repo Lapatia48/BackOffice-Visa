@@ -4,6 +4,7 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="framework.visa.entity.Nationalite" %>
 <%@ page import="framework.visa.entity.SituationFamiliale" %>
+<%@ page import="framework.visa.entity.Sexe" %>
 <%@ page import="framework.visa.entity.CategorieVisa" %>
 <%@ page import="framework.visa.entity.Dossier" %>
 
@@ -38,6 +39,11 @@
     List<SituationFamiliale> situationsFamiliales = (List<SituationFamiliale>) request.getAttribute("situationsFamiliales");
     if (situationsFamiliales == null) {
         situationsFamiliales = Collections.emptyList();
+    }
+
+    List<Sexe> sexes = (List<Sexe>) request.getAttribute("sexes");
+    if (sexes == null) {
+        sexes = Collections.emptyList();
     }
 
     List<Nationalite> nationalites = (List<Nationalite>) request.getAttribute("nationalites");
@@ -186,7 +192,16 @@
         <% } %>
 
         <div class="bloc">
-            <button type="submit">Confirmer</button>
+            <div class="form-actions">
+                <button type="submit">Confirmer</button>
+                <button
+                    type="submit"
+                    class="secondary-action"
+                    formaction="${pageContext.request.contextPath}/nouveau-titre/avec-photo-signature"
+                    formmethod="post">
+                    Confirmer et ajouter photo/signature
+                </button>
+            </div>
         </div>
     </div>
 
@@ -205,6 +220,13 @@
             <label>Lieu de naissance
                 <input type="text" name="lieuNaissance" required>
             </label>
+            <label>Sexe</label>
+            <% for (Sexe sexe : sexes) { %>
+                <label class="inline-checkbox">
+                    <input type="radio" name="sexeId" value="<%= sexe.getId() %>" required>
+                    <%= sexe.getLibelle() %>
+                </label>
+            <% } %>
             <label>Situation familiale
                 <select name="situationFamilialeId" required>
                     <option value="">-- choisir --</option>

@@ -7,6 +7,7 @@
 <%@ page import="framework.visa.entity.Passeport" %>
 <%@ page import="framework.visa.entity.Visa" %>
 <%@ page import="framework.visa.entity.Demandeur" %>
+<%@ page import="framework.visa.entity.DemandeurPhotoSignature" %>
 <%@ page import="framework.visa.entity.DemandeDossier" %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -32,6 +33,37 @@
             font-weight: bold;
             width: 30%;
         }
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .media-card {
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+        }
+        .media-card h3 {
+            margin-bottom: 10px;
+        }
+        .media-card img {
+            display: block;
+            width: 100%;
+            max-height: 320px;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        .media-placeholder {
+            border: 1px dashed #bbb;
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+            color: #666;
+            background: #fcfcfc;
+        }
     </style>
 </head>
 <body>
@@ -42,6 +74,7 @@
     Passeport passeport = (Passeport) request.getAttribute("passeport");
     CarteResident carte = (CarteResident) request.getAttribute("carte");
     Visa visa = (Visa) request.getAttribute("visa");
+    DemandeurPhotoSignature demandeurMedia = (DemandeurPhotoSignature) request.getAttribute("demandeurMedia");
     @SuppressWarnings("unchecked")
     List<DemandeDossier> demandeDossiers = (List<DemandeDossier>) request.getAttribute("demandeDossiers");
     if (demandeDossiers == null) {
@@ -70,6 +103,7 @@
             <tr><td><strong>Prénom:</strong></td><td><%= demandeur.getPrenom() == null ? "-" : demandeur.getPrenom() %></td></tr>
             <tr><td><strong>Date de naissance:</strong></td><td><%= demandeur.getDateNaissance() == null ? "-" : demandeur.getDateNaissance().format(df) %></td></tr>
             <tr><td><strong>Lieu de naissance:</strong></td><td><%= demandeur.getLieuNaissance() == null ? "-" : demandeur.getLieuNaissance() %></td></tr>
+            <tr><td><strong>Sexe:</strong></td><td><%= demandeur.getSexe() == null ? "-" : demandeur.getSexe().getLibelle() %></td></tr>
             <tr><td><strong>Nationalité:</strong></td><td><%= demandeur.getNationalite() == null ? "-" : demandeur.getNationalite().getLibelle() %></td></tr>
             <tr><td><strong>Situation familiale:</strong></td><td><%= demandeur.getSituationFamiliale() == null ? "-" : demandeur.getSituationFamiliale().getLibelle() %></td></tr>
             <tr><td><strong>Téléphone:</strong></td><td><%= demandeur.getTelephone() == null ? "-" : demandeur.getTelephone() %></td></tr>
@@ -78,6 +112,36 @@
             <tr><td><strong>Créé le:</strong></td><td><%= demandeur.getCreatedAt() == null ? "-" : demandeur.getCreatedAt().format(dtf) %></td></tr>
             <tr><td><strong>Modifié le:</strong></td><td><%= demandeur.getUpdatedAt() == null ? "-" : demandeur.getUpdatedAt().format(dtf) %></td></tr>
         </table>
+    <% } %>
+</div>
+
+<div class="bloc">
+    <h2>Photo et signature</h2>
+    <% boolean mediaComplete = demandeurMedia != null
+        && demandeurMedia.getPhoto() != null && !demandeurMedia.getPhoto().isBlank()
+        && demandeurMedia.getSignature() != null && !demandeurMedia.getSignature().isBlank(); %>
+    <% if (mediaComplete) { %>
+        <div class="media-grid">
+            <div class="media-card">
+                <h3>Photo</h3>
+                <img src="<%= demandeurMedia.getPhoto() %>" alt="Photo du demandeur">
+            </div>
+            <div class="media-card">
+                <h3>Signature</h3>
+                <img src="<%= demandeurMedia.getSignature() %>" alt="Signature du demandeur">
+            </div>
+        </div>
+    <% } else { %>
+        <div class="media-placeholder">
+            <p>Aucune photo ni signature n'a encore été enregistrée.</p>
+            <% if (demande != null && demande.getId() != null) { %>
+                <p style="margin-top: 10px;">
+                    <a class="btn-action" href="${pageContext.request.contextPath}/demandeur-media?demandeId=<%= demande.getId() %>&source=details">
+                        Ajouter photo / signature
+                    </a>
+                </p>
+            <% } %>
+        </div>
     <% } %>
 </div>
 

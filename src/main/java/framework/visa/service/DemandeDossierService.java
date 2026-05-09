@@ -7,10 +7,12 @@ import framework.visa.entity.Demande;
 import framework.visa.entity.DemandeDossier;
 import framework.visa.entity.DemandeDossierScan;
 import framework.visa.entity.Demandeur;
+import framework.visa.entity.DemandeurPhotoSignature;
 import framework.visa.entity.DemandeurVisaCarteResident;
 import framework.visa.entity.Etat;
 import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Passeport;
+import framework.visa.entity.Sexe;
 import framework.visa.entity.StatutDemande;
 import framework.visa.entity.Visa;
 import framework.visa.entity.VisaTransformable;
@@ -20,12 +22,14 @@ import framework.visa.repository.DemandeRepository;
 import framework.visa.repository.DemandeDossierRepository;
 import framework.visa.repository.DemandeDossierScanRepository;
 import framework.visa.repository.DemandeurRepository;
+import framework.visa.repository.DemandeurPhotoSignatureRepository;
 import framework.visa.repository.DemandeurVisaCarteResidentRepository;
 import framework.visa.repository.EtatRepository;
 import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
 import framework.visa.repository.SituationFamilialeRepository;
+import framework.visa.repository.SexeRepository;
 import framework.visa.repository.StatutDemandeRepository;
 import framework.visa.repository.VisaRepository;
 import framework.visa.repository.VisaTransformableRepository;
@@ -53,6 +57,7 @@ import java.util.Set;
 public class DemandeDossierService {
     private static final String STATUS_TERMINEE = "terminee";
     private static final String STATUS_SCANNEE = "scanne";
+    private static final String STATUS_PHOTO_SIGNATURE_TERMINEES = "photo et signature termines";
     private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
     private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
     private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -64,6 +69,8 @@ public class DemandeDossierService {
     private final DemandeurRepository demandeurRepository;
     private final PasseportRepository passeportRepository;
     private final SituationFamilialeRepository situationFamilialeRepository;
+    private final SexeRepository sexeRepository;
+    private final DemandeurPhotoSignatureRepository demandeurPhotoSignatureRepository;
     private final NationaliteRepository nationaliteRepository;
     private final StatutDemandeRepository statutDemandeRepository;
     private final HistoStatutDemandeRepository histoStatutDemandeRepository;
@@ -82,6 +89,8 @@ public class DemandeDossierService {
             DemandeurRepository demandeurRepository,
             PasseportRepository passeportRepository,
             SituationFamilialeRepository situationFamilialeRepository,
+            SexeRepository sexeRepository,
+            DemandeurPhotoSignatureRepository demandeurPhotoSignatureRepository,
             NationaliteRepository nationaliteRepository,
             StatutDemandeRepository statutDemandeRepository,
             HistoStatutDemandeRepository histoStatutDemandeRepository,
@@ -98,6 +107,8 @@ public class DemandeDossierService {
         this.demandeurRepository = demandeurRepository;
         this.passeportRepository = passeportRepository;
         this.situationFamilialeRepository = situationFamilialeRepository;
+        this.sexeRepository = sexeRepository;
+        this.demandeurPhotoSignatureRepository = demandeurPhotoSignatureRepository;
         this.nationaliteRepository = nationaliteRepository;
         this.statutDemandeRepository = statutDemandeRepository;
         this.histoStatutDemandeRepository = histoStatutDemandeRepository;
@@ -276,6 +287,7 @@ public class DemandeDossierService {
             String prenom,
             LocalDate dateNaissance,
             String lieuNaissance,
+            Integer sexeId,
             Integer situationFamilialeId,
             Integer nationaliteId,
             String telephone,
@@ -292,6 +304,9 @@ public class DemandeDossierService {
             LocalDate dateExpirationVisaTransformable) {
         Demande demande = demandeRepository.findDetailedById(demandeId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+        String statutActuel = demande.getStatut() == null || demande.getStatut().getLibelle() == null
+            ? ""
+            : demande.getStatut().getLibelle().trim();
 
         List<DemandeDossier> lignes = repository.findByDemandeIdOrderByDossierLibelleAsc(demandeId);
         if (lignes.isEmpty()) {
@@ -349,6 +364,7 @@ public class DemandeDossierService {
                     prenom,
                     dateNaissance,
                     lieuNaissance,
+                    sexeId,
                     situationFamilialeId,
                     nationaliteId,
                     telephone,
@@ -368,21 +384,33 @@ public class DemandeDossierService {
         }
 
         boolean hasMissing = lignes.stream().anyMatch(ligne -> !ligne.isEstFourni());
-        boolean alreadyCompleted = demande.getStatut() != null
-                && STATUS_TERMINEE.equalsIgnoreCase(demande.getStatut().getLibelle());
+        boolean alreadyScanne = STATUS_SCANNEE.equalsIgnoreCase(statutActuel);
 
-        if (!hasMissing && !alreadyCompleted) {
-            StatutDemande complet = getOrCreateStatus(STATUS_TERMINEE);
-            demande.setStatut(complet);
+        if (!hasMissing && !alreadyScanne) {
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            boolean hasCompleteMedia = hasCompletePhotoSignature(demandeurId);
+            StatutDemande targetStatus = getOrCreateStatus(
+                    hasCompleteMedia ? STATUS_PHOTO_SIGNATURE_TERMINEES : STATUS_TERMINEE
+            );
+            boolean statusChanged = demande.getStatut() == null
+                    || demande.getStatut().getLibelle() == null
+                    || !targetStatus.getLibelle().equalsIgnoreCase(demande.getStatut().getLibelle());
+            if (statusChanged) {
+                demande.setStatut(targetStatus);
+            }
             issueVisaIfNeeded(demande);
             demandeRepository.save(demande);
 
-            HistoStatutDemande historique = new HistoStatutDemande();
-            historique.setDemande(demande);
-            historique.setStatut(complet);
-            historique.setDateChangement(LocalDateTime.now());
-            historique.setCommentaire("Demande completee apres ajout de pieces manquantes.");
-            histoStatutDemandeRepository.save(historique);
+            if (statusChanged) {
+                HistoStatutDemande historique = new HistoStatutDemande();
+                historique.setDemande(demande);
+                historique.setStatut(targetStatus);
+                historique.setDateChangement(LocalDateTime.now());
+                historique.setCommentaire(hasCompleteMedia
+                        ? "Demande completee avec photo et signature terminees."
+                        : "Demande completee apres ajout de pieces manquantes.");
+                histoStatutDemandeRepository.save(historique);
+            }
         } else if (!hasMissing) {
             issueVisaIfNeeded(demande);
             demandeRepository.save(demande);
@@ -412,8 +440,9 @@ public class DemandeDossierService {
         if (STATUS_SCANNEE.equalsIgnoreCase(statut)) {
             throw new IllegalArgumentException("Cette demande est deja scannee et n'est plus modifiable.");
         }
-        if (!STATUS_TERMINEE.equalsIgnoreCase(statut)) {
-            throw new IllegalArgumentException("Seules les demandes terminees peuvent etre scannees.");
+        if (!STATUS_TERMINEE.equalsIgnoreCase(statut)
+                && !STATUS_PHOTO_SIGNATURE_TERMINEES.equalsIgnoreCase(statut)) {
+            throw new IllegalArgumentException("Seules les demandes terminees ou photo et signature termines peuvent etre scannees.");
         }
 
         DemandeDossier ligne = repository.findFirstByDemandeIdAndDossierId(demandeId, dossierId)
@@ -447,17 +476,111 @@ public class DemandeDossierService {
             .filter(java.util.Objects::nonNull)
             .allMatch(scannedDossierIds::contains);
         if (allScanned) {
-            StatutDemande scanne = getOrCreateStatus(STATUS_SCANNEE);
-            demande.setStatut(scanne);
-            demandeRepository.save(demande);
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            if (!hasCompletePhotoSignature(demandeurId)) {
+                throw new IllegalArgumentException("La demande ne peut pas passer au statut scanne sans photo et signature.");
+            }
 
-            HistoStatutDemande historique = new HistoStatutDemande();
-            historique.setDemande(demande);
-            historique.setStatut(scanne);
-            historique.setDateChangement(LocalDateTime.now());
-            historique.setCommentaire("Tous les scans des pieces justificatives sont completes.");
-            histoStatutDemandeRepository.save(historique);
+            reconcileScanneStatus(demandeId);
         }
+    }
+
+    @Transactional
+    public void reconcileScanneStatus(Integer demandeId) {
+        if (demandeId == null) {
+            throw new IllegalArgumentException("Demande introuvable.");
+        }
+
+        Demande demande = demandeRepository.findDetailedById(demandeId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+        String statut = demande.getStatut() == null || demande.getStatut().getLibelle() == null
+                ? ""
+                : demande.getStatut().getLibelle().trim();
+        if (STATUS_SCANNEE.equalsIgnoreCase(statut)) {
+            return;
+        }
+
+        Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+        if (!hasCompletePhotoSignature(demandeurId)) {
+            return;
+        }
+
+        List<DemandeDossier> lignes = repository.findByDemandeIdOrderByDossierLibelleAsc(demandeId);
+        if (lignes.isEmpty()) {
+            return;
+        }
+
+        Set<Integer> scannedDossierIds = new HashSet<>(demandeDossierScanRepository.findScannedDossierIdsByDemandeId(demandeId));
+        boolean allScanned = lignes.stream()
+                .map(ligne -> ligne.getDossier() == null ? null : ligne.getDossier().getId())
+                .filter(java.util.Objects::nonNull)
+                .allMatch(scannedDossierIds::contains);
+        if (!allScanned) {
+            return;
+        }
+
+        StatutDemande scanne = getOrCreateStatus(STATUS_SCANNEE);
+        demande.setStatut(scanne);
+        demandeRepository.save(demande);
+
+        HistoStatutDemande historique = new HistoStatutDemande();
+        historique.setDemande(demande);
+        historique.setStatut(scanne);
+        historique.setDateChangement(LocalDateTime.now());
+        historique.setCommentaire("Tous les scans des pieces justificatives sont completes.");
+        histoStatutDemandeRepository.save(historique);
+    }
+
+    @Transactional
+    public void markPhotoSignatureCompleted(Integer demandeId) {
+        if (demandeId == null) {
+            throw new IllegalArgumentException("Demande introuvable.");
+        }
+
+        Demande demande = demandeRepository.findDetailedById(demandeId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande introuvable."));
+
+        String statut = demande.getStatut() == null || demande.getStatut().getLibelle() == null
+                ? ""
+                : demande.getStatut().getLibelle().trim();
+        if (STATUS_SCANNEE.equalsIgnoreCase(statut)) {
+            return;
+        }
+
+        boolean allScanned = areAllDossiersScanned(demandeId);
+        if (allScanned) {
+            reconcileScanneStatus(demandeId);
+            return;
+        }
+
+        Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+        if (!hasCompletePhotoSignature(demandeurId)) {
+            return;
+        }
+
+        StatutDemande photoSignatureTerminees = getOrCreateStatus(STATUS_PHOTO_SIGNATURE_TERMINEES);
+        demande.setStatut(photoSignatureTerminees);
+        demandeRepository.save(demande);
+
+        HistoStatutDemande historique = new HistoStatutDemande();
+        historique.setDemande(demande);
+        historique.setStatut(photoSignatureTerminees);
+        historique.setDateChangement(LocalDateTime.now());
+        historique.setCommentaire("Photo et signature completes.");
+        histoStatutDemandeRepository.save(historique);
+    }
+
+    private boolean areAllDossiersScanned(Integer demandeId) {
+        List<DemandeDossier> lignes = repository.findByDemandeIdOrderByDossierLibelleAsc(demandeId);
+        if (lignes.isEmpty()) {
+            return false;
+        }
+
+        Set<Integer> scannedDossierIds = new HashSet<>(demandeDossierScanRepository.findScannedDossierIdsByDemandeId(demandeId));
+        return lignes.stream()
+                .map(ligne -> ligne.getDossier() == null ? null : ligne.getDossier().getId())
+                .filter(java.util.Objects::nonNull)
+                .allMatch(scannedDossierIds::contains);
     }
 
     private void appendHistorique(Demande demande, String commentaire) {
@@ -591,6 +714,7 @@ public class DemandeDossierService {
             String prenom,
             LocalDate dateNaissance,
             String lieuNaissance,
+            Integer sexeId,
             Integer situationFamilialeId,
             Integer nationaliteId,
             String telephone,
@@ -614,6 +738,9 @@ public class DemandeDossierService {
         demandeur.setPrenom(requireNonBlank(prenom, "Prenom"));
         demandeur.setDateNaissance(requireDate(dateNaissance, "Date de naissance"));
         demandeur.setLieuNaissance(requireNonBlank(lieuNaissance, "Lieu de naissance"));
+        Sexe sexe = sexeRepository.findById(requireId(sexeId, "Sexe"))
+            .orElseThrow(() -> new IllegalArgumentException("Sexe introuvable."));
+        demandeur.setSexe(sexe);
         demandeur.setSituationFamiliale(situationFamilialeRepository.findById(requireId(situationFamilialeId, "Situation familiale"))
             .orElseThrow(() -> new IllegalArgumentException("Situation familiale introuvable.")));
         demandeur.setNationalite(nationaliteRepository.findById(requireId(nationaliteId, "Nationalite"))
@@ -703,6 +830,16 @@ public class DemandeDossierService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean hasCompletePhotoSignature(Integer demandeurId) {
+        if (demandeurId == null) {
+            return false;
+        }
+
+        return demandeurPhotoSignatureRepository.findByDemandeurId(demandeurId)
+                .map(media -> hasText(media.getPhoto()) && hasText(media.getSignature()))
+                .orElse(false);
     }
 
     private boolean isPdf(MultipartFile file) {

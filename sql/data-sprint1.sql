@@ -82,6 +82,18 @@ WHERE NOT EXISTS (
 	SELECT 1 FROM Situation_familiale WHERE lower(libelle) = 'divorce'
 );
 
+INSERT INTO Sexe (libelle)
+SELECT 'M'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Sexe WHERE lower(libelle) = 'm'
+);
+
+INSERT INTO Sexe (libelle)
+SELECT 'F'
+WHERE NOT EXISTS (
+	SELECT 1 FROM Sexe WHERE lower(libelle) = 'f'
+);
+
 INSERT INTO Nationalite (libelle)
 SELECT 'malagasy'
 WHERE NOT EXISTS (
