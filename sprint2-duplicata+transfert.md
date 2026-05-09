@@ -31,5 +31,3 @@
     - informations creees sur carte resident et visa (references generees automatiquement)
     - informations du nouveau titre cree (cas sans donnees anterieures)
     - informations du visa transformable saisi (cas sans donnees anterieures)
-
-sprint 3 ok

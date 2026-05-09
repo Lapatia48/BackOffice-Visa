@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface PasseportRepository extends JpaRepository<Passeport, Integer> {
 	Optional<Passeport> findFirstByDemandeurIdOrderByIdDesc(Integer demandeurId);
+
+	Optional<Passeport> findFirstByNumeroPasseportIgnoreCaseOrderByIdDesc(String numeroPasseport);
 }

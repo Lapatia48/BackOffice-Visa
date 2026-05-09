@@ -122,6 +122,14 @@ public class DemandeDossierService {
         return demandeRepository.findDossiersTermineesNouveauTitre();
     }
 
+    public List<Demande> findDemandesByStatut(String statutLibelle) {
+        return demandeRepository.findByStatutLibelle(statutLibelle);
+    }
+
+    public List<Demande> findAllDemandes() {
+        return demandeRepository.findAllDemandes();
+    }
+
     public Optional<Demande> findDemandeById(Integer demandeId) {
         return demandeRepository.findDetailedById(demandeId);
     }
@@ -133,6 +141,14 @@ public class DemandeDossierService {
 
         List<Demande> rows = demandeRepository.findDetailedByDemandeurIdOrderByIdDesc(demandeurId);
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
+    }
+
+    public List<Demande> findDemandesByDemandeurId(Integer demandeurId) {
+        if (demandeurId == null) {
+            return List.of();
+        }
+
+        return demandeRepository.findDetailedByDemandeurIdOrderByIdDesc(demandeurId);
     }
 
     public Optional<Passeport> findPasseportByDemandeId(Integer demandeId) {

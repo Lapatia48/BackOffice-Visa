@@ -4,8 +4,9 @@
 <%@ page import="java.util.Collections" %>
 <%@ page import="framework.visa.entity.Nationalite" %>
 <%@ page import="framework.visa.entity.SituationFamiliale" %>
-<%@ page import="framework.visa.entity.TypeDemande" %>
+<%@ page import="framework.visa.entity.CategorieVisa" %>
 <%@ page import="framework.visa.entity.Dossier" %>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -16,9 +17,12 @@
 </head>
 <body>
 <%
-    List<TypeDemande> types = (List<TypeDemande>) request.getAttribute("types");
-    if (types == null) {
-        types = Collections.emptyList();
+    List<CategorieVisa> categorieVisa = (List<CategorieVisa>) request.getAttribute("categorieVisa");
+    if (categorieVisa == null) {
+        categorieVisa = (List<CategorieVisa>) request.getAttribute("types");
+    }
+    if (categorieVisa == null) {
+        categorieVisa = Collections.emptyList();
     }
 
     List<Dossier> commonDossiers = (List<Dossier>) request.getAttribute("commonDossiers");
@@ -113,12 +117,12 @@
             </label>
         </div>
         <div class="bloc">
-            <h2 class="section-title">Type visa demandée</h2>
-            <label>Selectionner un type
-                <select id="typeVisaId" name="typeVisaId" required>
+            <h2 class="section-title">Categorie visa demandée</h2>
+            <label>Selectionner une categorie
+                <select id="categorieVisaId" name="categorieVisaId" required>
                     <option value="">-- choisir --</option>
-                    <% for (TypeDemande type : types) { %>
-                        <option value="<%= type.getId() %>"><%= type.getLibelle() %></option>
+                    <% for (CategorieVisa categorie : categorieVisa) { %>
+                        <option value="<%= categorie.getId() %>"><%= categorie.getLibelle() %></option>
                     <% } %>
                 </select>
             </label>
@@ -141,14 +145,14 @@
 
         <div class="bloc">
             <h2 class="section-title">Pieces complementaires</h2>
-            <% for (TypeDemande type : types) {
-                List<Dossier> typeDossiers = typedDossiers.get(type.getId());
+            <% for (CategorieVisa categorie : categorieVisa) {
+                List<Dossier> typeDossiers = typedDossiers.get(categorie.getId());
                 if (typeDossiers == null) {
                     typeDossiers = Collections.emptyList();
                 }
             %>
-                <div class="typed-group" data-type-id="<%= type.getId() %>" style="display:none;">
-                    <h3><%= type.getLibelle() %></h3>
+                <div class="typed-group" data-type-id="<%= categorie.getId() %>" style="display:none;">
+                    <h3><%= categorie.getLibelle() %></h3>
                     <% for (Dossier dossier : typeDossiers) { %>
                         <label class="inline-checkbox">
                             <input type="checkbox" name="dossierIds" value="<%= dossier.getId() %>">
@@ -248,7 +252,7 @@
 </form>
 
 <script>
-    const typeSelect = document.getElementById('typeVisaId');
+    const typeSelect = document.getElementById('categorieVisaId');
     const groups = document.querySelectorAll('.typed-group');
 
     function refreshTypedGroups() {

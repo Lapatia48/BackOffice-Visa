@@ -50,8 +50,8 @@ public class DemandeWorkflowService {
         private static final String STATUS_CREE = "cree";
         private static final String STATUS_TERMINEE = "terminee";
         private static final String STATUS_VALIDEE = "approuve";
-        private static final String CATEGORIE_NOUVEAU_TITRE = "nouveau_titre";
         private static final String ETAT_NOUVEAU_TITRE = "nouveau titre";
+        private static final String TYPE_NOUVEAU_TITRE = "nouveau titre";
         private static final String TYPE_DUPLICATA = "duplicata";
         private static final String TYPE_TRANSFERT_VISA = "transfert";
         private static final DateTimeFormatter REFERENCE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -156,13 +156,15 @@ public class DemandeWorkflowService {
                         String lieuEntreeMadagascar,
                         LocalDate dateDonnationVisaTransformable,
                         LocalDate dateExpirationVisaTransformable,
-                        Integer typeVisaId,
+                        Integer categorieVisaId,
                         List<Integer> dossierIds,
                         String observations,
+                        String modeOperation,
                         String carteEtatLibelle) {
 
-                TypeDemande typeVisa = typeDemandeRepository.findById(typeVisaId)
-                                .orElseThrow(() -> new IllegalArgumentException("Type de visa introuvable."));
+                CategorieVisa categorieVisa = categorieVisaRepository.findById(categorieVisaId)
+                                .orElseThrow(() -> new IllegalArgumentException("Categorie de visa introuvable."));
+                TypeDemande typeDemande = resolveTypeDemandeForMode(modeOperation);
 
                 validateVisaTransformableExpiration(dateExpirationVisaTransformable);
 
@@ -171,7 +173,7 @@ public class DemandeWorkflowService {
                                 : new HashSet<>(dossierIds);
 
                 List<Dossier> commonDossiers = dossierTypeVisaRepository.findCommonDossiers();
-                List<Dossier> typedDossiers = dossierTypeVisaRepository.findDossiersByTypeId(typeVisaId);
+                List<Dossier> typedDossiers = dossierTypeVisaRepository.findDossiersByTypeId(categorieVisaId);
 
                 LinkedHashMap<Integer, Dossier> applicableDossiersById = new LinkedHashMap<>();
                 for (Dossier dossier : commonDossiers) {
@@ -224,12 +226,12 @@ public class DemandeWorkflowService {
                 demande.setDateDemande(LocalDate.now());
                 demande.setStatut(statut);
                 demande.setDemandeur(demandeur);
-                demande.setTypeDemande(typeVisa);
+                demande.setTypeDemande(typeDemande);
                 demande.setObservations(observations);
                 demande = demandeRepository.save(demande);
 
                 if (!hasMissingDossier) {
-                        Visa visa = createVisaForNouveauTitre(demande, passeport);
+                        Visa visa = createVisaForNouveauTitre(demande, passeport, categorieVisa);
                         demande.setVisa(visa);
                         demandeRepository.save(demande);
 
@@ -285,7 +287,7 @@ public class DemandeWorkflowService {
                         String lieuEntreeMadagascar,
                         LocalDate dateDonnationVisaTransformable,
                         LocalDate dateExpirationVisaTransformable,
-                        Integer typeVisaId,
+                        Integer categorieVisaId,
                         List<Integer> dossierIds,
                         List<Integer> operationDossierIds,
                         String observations,
@@ -293,8 +295,9 @@ public class DemandeWorkflowService {
 
                 String normalizedMode = normalizeModeOperation(modeOperation);
 
-                TypeDemande typeVisa = typeDemandeRepository.findById(typeVisaId)
-                                .orElseThrow(() -> new IllegalArgumentException("Type de visa introuvable."));
+                CategorieVisa categorieVisa = categorieVisaRepository.findById(categorieVisaId)
+                                .orElseThrow(() -> new IllegalArgumentException("Categorie de visa introuvable."));
+                TypeDemande typeNouveauTitre = resolveTypeDemandeForMode(TYPE_NOUVEAU_TITRE);
 
                 validateVisaTransformableExpiration(dateExpirationVisaTransformable);
 
@@ -333,11 +336,11 @@ public class DemandeWorkflowService {
                 demandeNouveauTitre.setDateTraitement(LocalDate.now());
                 demandeNouveauTitre.setStatut(statutValidee);
                 demandeNouveauTitre.setDemandeur(demandeur);
-                demandeNouveauTitre.setTypeDemande(typeVisa);
+                demandeNouveauTitre.setTypeDemande(typeNouveauTitre);
                 demandeNouveauTitre.setObservations(observations);
                 demandeNouveauTitre = demandeRepository.save(demandeNouveauTitre);
 
-                Visa visa = createVisaForNouveauTitre(demandeNouveauTitre, passeport);
+                Visa visa = createVisaForNouveauTitre(demandeNouveauTitre, passeport, categorieVisa);
                 demandeNouveauTitre.setVisa(visa);
                 demandeRepository.save(demandeNouveauTitre);
 
@@ -346,7 +349,7 @@ public class DemandeWorkflowService {
                                 : ETAT_NOUVEAU_TITRE;
                 CarteResident carteResident = createCarteResidentForVisa(demandeur, visa, etatCarte);
 
-                createDemandeDossiers(demandeNouveauTitre, collectApplicableDossiers(typeVisa.getId()), dossierIds);
+                createDemandeDossiers(demandeNouveauTitre, collectApplicableDossiers(categorieVisa.getId()), dossierIds);
                 appendHistorique(demandeNouveauTitre, statutValidee, "Demande nouveau titre validee automatiquement (cas sans donnees anterieures). ");
                 appendHistorique(demandeNouveauTitre, statutValidee, "Visa long sejour cree : " + visa.getReference() + ".");
                 appendHistorique(demandeNouveauTitre, statutValidee, "Carte resident creee : " + carteResident.getNumero() + ".");
@@ -402,13 +405,13 @@ public class DemandeWorkflowService {
                 return demandeurRepository.save(demandeur);
         }
 
-        private List<Dossier> collectApplicableDossiers(Integer typeId) {
+        private List<Dossier> collectApplicableDossiers(Integer categorieVisaId) {
                 LinkedHashMap<Integer, Dossier> applicableDossiersById = new LinkedHashMap<>();
                 for (Dossier dossier : dossierTypeVisaRepository.findCommonDossiers()) {
                         applicableDossiersById.put(dossier.getId(), dossier);
                 }
-                if (typeId != null) {
-                        for (Dossier dossier : dossierTypeVisaRepository.findDossiersByTypeId(typeId)) {
+                if (categorieVisaId != null) {
+                        for (Dossier dossier : dossierTypeVisaRepository.findDossiersByTypeId(categorieVisaId)) {
                                 applicableDossiersById.put(dossier.getId(), dossier);
                         }
                 }
@@ -443,17 +446,27 @@ public class DemandeWorkflowService {
                 }
         }
 
-        private String normalizeModeOperation(String modeOperation) {
+        private String resolveModeOperation(String modeOperation) {
                 if (modeOperation == null || modeOperation.isBlank()) {
-                        throw new IllegalArgumentException("Mode sans donnees anterieures invalide.");
+                        return "";
                 }
 
                 String normalized = modeOperation.trim().toLowerCase();
-                if (!TYPE_DUPLICATA.equals(normalized) && !"transfert".equals(normalized)) {
-                        throw new IllegalArgumentException("Mode sans donnees anterieures non supporte: " + modeOperation);
+                if (!TYPE_DUPLICATA.equals(normalized) && !TYPE_TRANSFERT_VISA.equals(normalized)) {
+                        return "";
                 }
 
                 return normalized;
+        }
+
+        private String normalizeModeOperation(String modeOperation) {
+                return resolveModeOperation(modeOperation);
+        }
+
+        private TypeDemande resolveTypeDemandeForMode(String modeOperation) {
+                String normalized = resolveModeOperation(modeOperation);
+                String label = normalized.isBlank() ? TYPE_NOUVEAU_TITRE : normalized;
+                return findOrCreateTypeDemande(label);
         }
 
         private TypeDemande resolveOperationType(String normalizedMode) {
@@ -461,12 +474,27 @@ public class DemandeWorkflowService {
                                 ? TYPE_DUPLICATA
                                 : TYPE_TRANSFERT_VISA;
 
-                return typeDemandeRepository.findFirstByLibelleIgnoreCase(operationLabel)
+                return findOrCreateTypeDemande(operationLabel);
+        }
+
+        private TypeDemande findOrCreateTypeDemande(String requestedLabel) {
+                String normalizedLabel = normalizeLabel(requestedLabel);
+                return typeDemandeRepository.findAll().stream()
+                                .filter(typeDemande -> normalizeLabel(typeDemande.getLibelle()).equals(normalizedLabel))
+                                .findFirst()
                                 .orElseGet(() -> {
                                         TypeDemande typeDemande = new TypeDemande();
-                                        typeDemande.setLibelle(operationLabel);
+                                        typeDemande.setLibelle(requestedLabel.trim());
                                         return typeDemandeRepository.save(typeDemande);
                                 });
+        }
+
+        private String normalizeLabel(String value) {
+                if (value == null) {
+                        return "";
+                }
+
+                return value.trim().toLowerCase().replace('_', ' ').replaceAll("\\s+", " ");
         }
 
         private String buildOperationObservation(String normalizedMode, String observations) {
@@ -481,9 +509,7 @@ public class DemandeWorkflowService {
                 return prefix + " " + observations.trim();
         }
 
-        private Visa createVisaForNouveauTitre(Demande demande, Passeport passeport) {
-                CategorieVisa categorieVisa = resolveNouveauTitreCategorie();
-
+        private Visa createVisaForNouveauTitre(Demande demande, Passeport passeport, CategorieVisa categorieVisa) {
                 LocalDate dateDebut = LocalDate.now();
                 LocalDate dateFin = dateDebut.plusMonths(visaConfig.getDureeVisaMois());
 
@@ -494,16 +520,6 @@ public class DemandeWorkflowService {
                 visa.setCategorieVisa(categorieVisa);
                 visa.setPasseport(passeport);
                 return visaRepository.save(visa);
-        }
-
-        private CategorieVisa resolveNouveauTitreCategorie() {
-                return categorieVisaRepository.findFirstByLibelleIgnoreCase(CATEGORIE_NOUVEAU_TITRE)
-                                .or(() -> categorieVisaRepository.findFirstByLibelleIgnoreCase("nouveau titre"))
-                                .orElseGet(() -> {
-                                        CategorieVisa categorieVisa = new CategorieVisa();
-                                        categorieVisa.setLibelle(CATEGORIE_NOUVEAU_TITRE);
-                                        return categorieVisaRepository.save(categorieVisa);
-                                });
         }
 
         //create createCarteResidentIfNeeded
