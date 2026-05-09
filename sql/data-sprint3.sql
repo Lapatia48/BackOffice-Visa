@@ -6,3 +6,5 @@ duplicata
 type_visa:
 travailleur
 investisseur
+
+-- staging ok
