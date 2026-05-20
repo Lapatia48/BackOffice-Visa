@@ -23,6 +23,10 @@ public class Demandeur {
     @Column(name = "lieu_naissance", nullable = false, length = 100)
     private String lieuNaissance;
 
+    @ManyToOne
+    @JoinColumn(name = "id_sexe")
+    private Sexe sexe;
+
     @Column(nullable = false, length = 20)
     private String telephone;
 
@@ -57,6 +61,8 @@ public class Demandeur {
     public void setDateNaissance(LocalDate dateNaissance) { this.dateNaissance = dateNaissance; }
     public String getLieuNaissance() { return lieuNaissance; }
     public void setLieuNaissance(String lieuNaissance) { this.lieuNaissance = lieuNaissance; }
+    public Sexe getSexe() { return sexe; }
+    public void setSexe(Sexe sexe) { this.sexe = sexe; }
     public String getTelephone() { return telephone; }
     public void setTelephone(String telephone) { this.telephone = telephone; }
     public String getEmail() { return email; }

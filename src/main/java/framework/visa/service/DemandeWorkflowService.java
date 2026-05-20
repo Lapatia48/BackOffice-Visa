@@ -13,6 +13,7 @@ import framework.visa.entity.HistoStatutDemande;
 import framework.visa.entity.Nationalite;
 import framework.visa.entity.Passeport;
 import framework.visa.entity.SituationFamiliale;
+import framework.visa.entity.Sexe;
 import framework.visa.entity.StatutDemande;
 import framework.visa.entity.TypeDemande;
 import framework.visa.entity.Visa;
@@ -29,6 +30,7 @@ import framework.visa.repository.HistoStatutDemandeRepository;
 import framework.visa.repository.NationaliteRepository;
 import framework.visa.repository.PasseportRepository;
 import framework.visa.repository.SituationFamilialeRepository;
+import framework.visa.repository.SexeRepository;
 import framework.visa.repository.StatutDemandeRepository;
 import framework.visa.repository.TypeDemandeRepository;
 import framework.visa.repository.VisaRepository;
@@ -68,6 +70,7 @@ public class DemandeWorkflowService {
         private final HistoStatutDemandeRepository histoStatutDemandeRepository;
         private final VisaTransformableRepository visaTransformableRepository;
         private final SituationFamilialeRepository situationFamilialeRepository;
+        private final SexeRepository sexeRepository;
         private final NationaliteRepository nationaliteRepository;
         private final VisaRepository visaRepository;
         private final CategorieVisaRepository categorieVisaRepository;
@@ -87,6 +90,7 @@ public class DemandeWorkflowService {
                         HistoStatutDemandeRepository histoStatutDemandeRepository,
                         VisaTransformableRepository visaTransformableRepository,
                         SituationFamilialeRepository situationFamilialeRepository,
+                        SexeRepository sexeRepository,
                         NationaliteRepository nationaliteRepository,
                         VisaRepository visaRepository,
                         CategorieVisaRepository categorieVisaRepository,
@@ -104,6 +108,7 @@ public class DemandeWorkflowService {
                 this.histoStatutDemandeRepository = histoStatutDemandeRepository;
                 this.visaTransformableRepository = visaTransformableRepository;
                 this.situationFamilialeRepository = situationFamilialeRepository;
+                this.sexeRepository = sexeRepository;
                 this.nationaliteRepository = nationaliteRepository;
                 this.visaRepository = visaRepository;
                 this.categorieVisaRepository = categorieVisaRepository;
@@ -142,6 +147,7 @@ public class DemandeWorkflowService {
                         String prenom,
                         LocalDate dateNaissance,
                         String lieuNaissance,
+                        Integer sexeId,
                         Integer situationFamilialeId,
                         Integer nationaliteId,
                         String telephone,
@@ -196,6 +202,7 @@ public class DemandeWorkflowService {
                                 prenom,
                                 dateNaissance,
                                 lieuNaissance,
+                                sexeId,
                                 situationFamilialeId,
                                 nationaliteId,
                                 telephone,
@@ -220,7 +227,7 @@ public class DemandeWorkflowService {
                 visaTransformable.setDateExpiration(requireDate(dateExpirationVisaTransformable, "Date d'expiration visa transformable"));
                 visaTransformableRepository.save(visaTransformable);
 
-                StatutDemande statut = getOrCreateStatus(hasMissingDossier ? STATUS_CREE : STATUS_TERMINEE);
+                StatutDemande statut = getOrCreateStatus(STATUS_CREE);
 
                 Demande demande = new Demande();
                 demande.setDateDemande(LocalDate.now());
@@ -258,8 +265,8 @@ public class DemandeWorkflowService {
                                 demande,
                                 statut,
                                 hasMissingDossier
-                                                ? "Demande enregistree avec pieces manquantes."
-                                                : "Demande enregistree avec dossier complet."
+                                                ? "Demande enregistree avec pieces manquantes, statut cree."
+                                                : "Demande enregistree avec dossier complet, statut cree."
                 );
                 appendHistorique(demande, statut, "Visa transformable renseigne et lie au demandeur.");
 
@@ -273,6 +280,7 @@ public class DemandeWorkflowService {
                         String prenom,
                         LocalDate dateNaissance,
                         String lieuNaissance,
+                        Integer sexeId,
                         Integer situationFamilialeId,
                         Integer nationaliteId,
                         String telephone,
@@ -306,6 +314,7 @@ public class DemandeWorkflowService {
                                 prenom,
                                 dateNaissance,
                                 lieuNaissance,
+                                sexeId,
                                 situationFamilialeId,
                                 nationaliteId,
                                 telephone,
@@ -380,6 +389,7 @@ public class DemandeWorkflowService {
                         String prenom,
                         LocalDate dateNaissance,
                         String lieuNaissance,
+                        Integer sexeId,
                         Integer situationFamilialeId,
                         Integer nationaliteId,
                         String telephone,
@@ -395,6 +405,9 @@ public class DemandeWorkflowService {
                 demandeur.setPrenom(prenom);
                 demandeur.setDateNaissance(dateNaissance);
                 demandeur.setLieuNaissance(lieuNaissance);
+                Sexe sexe = sexeRepository.findById(requireId(sexeId, "Sexe"))
+                                .orElseThrow(() -> new IllegalArgumentException("Sexe introuvable."));
+                demandeur.setSexe(sexe);
                 demandeur.setSituationFamiliale(situationFamiliale);
                 demandeur.setNationalite(nationalite);
                 demandeur.setTelephone(telephone);
@@ -612,6 +625,13 @@ public class DemandeWorkflowService {
         }
 
         private LocalDate requireDate(LocalDate value, String label) {
+                if (value == null) {
+                        throw new IllegalArgumentException(label + " est obligatoire.");
+                }
+                return value;
+        }
+
+        private Integer requireId(Integer value, String label) {
                 if (value == null) {
                         throw new IllegalArgumentException(label + " est obligatoire.");
                 }

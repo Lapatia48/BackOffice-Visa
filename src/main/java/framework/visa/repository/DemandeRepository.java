@@ -12,6 +12,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		where exists (
@@ -25,6 +26,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		left join fetch d.visa visa
@@ -36,6 +38,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		left join fetch d.visa visa
@@ -48,6 +51,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		join fetch d.visa visa
@@ -62,6 +66,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		where lower(statut.libelle) = lower(:statutLibelle)
@@ -72,6 +77,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Integer> {
 	@Query("""
 		select d from Demande d
 		join fetch d.demandeur demandeur
+		left join fetch demandeur.sexe sexe
 		join fetch d.typeDemande typeDemande
 		join fetch d.statut statut
 		order by d.dateDemande desc, d.id desc

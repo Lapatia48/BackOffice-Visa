@@ -7,6 +7,11 @@ CREATE TABLE Situation_familiale (
     libelle VARCHAR(50) NOT NULL
 );
 
+CREATE TABLE Sexe (
+    id SERIAL PRIMARY KEY,
+    libelle VARCHAR(1) NOT NULL
+);
+
 CREATE TABLE Nationalite (
     id SERIAL PRIMARY KEY,
     libelle VARCHAR(50) NOT NULL
@@ -33,11 +38,21 @@ CREATE TABLE Demandeur (
     prenom VARCHAR(50) NOT NULL,
     date_naissance DATE NOT NULL,
     lieu_naissance VARCHAR(100) NOT NULL,
+    id_sexe INT REFERENCES Sexe(id),
     telephone VARCHAR(20) NOT NULL,
     email VARCHAR(100) NOT NULL,
     adresse TEXT NOT NULL,
     id_situation_familiale INT REFERENCES Situation_familiale(id),
     id_nationalite INT REFERENCES Nationalite(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Demandeur_photo_signature (
+    id SERIAL PRIMARY KEY,
+    id_demandeur INT NOT NULL UNIQUE REFERENCES Demandeur(id),
+    photo TEXT,
+    signature TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

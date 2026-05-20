@@ -201,6 +201,14 @@ input:focus, textarea:focus, select:focus {
     accent-color: var(--accent);
 }
 
+.inline-checkbox input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+
 .obligatoire {
     font-size: 0.7rem;
     color: #d4a373;
@@ -249,6 +257,13 @@ form button[type="submit"] {
     margin-top: 0.5rem;
     width: auto;
     display: inline-block;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .submit-infos-suffix {

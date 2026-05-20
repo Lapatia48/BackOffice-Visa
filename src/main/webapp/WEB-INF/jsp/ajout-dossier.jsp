@@ -7,6 +7,7 @@
 <%@ page import="framework.visa.entity.Nationalite" %>
 <%@ page import="framework.visa.entity.Passeport" %>
 <%@ page import="framework.visa.entity.SituationFamiliale" %>
+<%@ page import="framework.visa.entity.Sexe" %>
 <%@ page import="framework.visa.entity.VisaTransformable" %>
 <!DOCTYPE html>
 <html lang="fr">
@@ -29,6 +30,11 @@
     List<SituationFamiliale> situationsFamiliales = (List<SituationFamiliale>) request.getAttribute("situationsFamiliales");
     if (situationsFamiliales == null) {
         situationsFamiliales = Collections.emptyList();
+    }
+
+    List<Sexe> sexes = (List<Sexe>) request.getAttribute("sexes");
+    if (sexes == null) {
+        sexes = Collections.emptyList();
     }
 
     List<Nationalite> nationalites = (List<Nationalite>) request.getAttribute("nationalites");
@@ -123,6 +129,23 @@
             <label>Lieu de naissance
                 <input class="editable-info" type="text" name="lieuNaissance" value="<%= demande.getDemandeur() == null ? "" : demande.getDemandeur().getLieuNaissance() %>" readonly>
             </label>
+            <label>Sexe</label>
+            <% for (Sexe sexe : sexes) { %>
+                <label class="inline-checkbox">
+                    <input
+                        class="editable-info"
+                        type="radio"
+                        name="sexeId"
+                        value="<%= sexe.getId() %>"
+                        <%= demande.getDemandeur() != null
+                            && demande.getDemandeur().getSexe() != null
+                            && sexe.getId().equals(demande.getDemandeur().getSexe().getId())
+                            ? "checked"
+                            : "" %>
+                        required>
+                    <%= sexe.getLibelle() %>
+                </label>
+            <% } %>
             <label>Situation familiale
                 <select class="editable-info" name="situationFamilialeId" disabled required>
                     <option value="">-- choisir --</option>
@@ -217,15 +240,16 @@
 
         editableInputs.forEach((input) => {
             const isSelect = input.tagName === 'SELECT';
+            const isRadio = input.type === 'radio';
             if (enabled) {
-                if (isSelect) {
+                if (isSelect || isRadio) {
                     input.removeAttribute('disabled');
                 } else {
                     input.removeAttribute('readonly');
                 }
                 input.classList.add('editable-active');
             } else {
-                if (isSelect) {
+                if (isSelect || isRadio) {
                     input.setAttribute('disabled', 'disabled');
                 } else {
                     input.setAttribute('readonly', 'readonly');

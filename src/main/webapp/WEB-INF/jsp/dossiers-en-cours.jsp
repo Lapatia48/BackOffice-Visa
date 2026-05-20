@@ -137,6 +137,11 @@
         remainingPiecesByDemande = Collections.emptyMap();
     }
 
+    Map<Integer, Boolean> mediaCompletionByDemandeurId = (Map<Integer, Boolean>) request.getAttribute("mediaCompletionByDemandeurId");
+    if (mediaCompletionByDemandeurId == null) {
+        mediaCompletionByDemandeurId = Collections.emptyMap();
+    }
+
     String message = (String) request.getAttribute("message");
     String error = (String) request.getAttribute("error");
     String statutFiltre = (String) request.getAttribute("statutFiltre");
@@ -204,6 +209,7 @@
     <div class="statut-nav">
         <a href="${pageContext.request.contextPath}/dossiers-en-cours" <%= "tous".equals(statutFiltre) ? "class=\"active\"" : "" %>>Tous les statuts</a>
         <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=cree" <%= "cree".equals(statutFiltre) ? "class=\"active\"" : "" %>>Créée</a>
+        <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=photo%20et%20signature%20termines" <%= "photo et signature termines".equals(statutFiltre) ? "class=\"active\"" : "" %>>Photo et signature terminés</a>
         <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=terminee" <%= "terminee".equals(statutFiltre) ? "class=\"active\"" : "" %>>Terminée</a>
         <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=scanne" <%= "scanne".equals(statutFiltre) ? "class=\"active\"" : "" %>>Scannée</a>
         <a href="${pageContext.request.contextPath}/dossiers-en-cours?statut=approuve" <%= "approuve".equals(statutFiltre) ? "class=\"active\"" : "" %>>Approuvée</a>
@@ -250,6 +256,8 @@
             long total = totalPiecesByDemande.getOrDefault(demandeId, 0L);
             long provided = providedPiecesByDemande.getOrDefault(demandeId, 0L);
             long remaining = remainingPiecesByDemande.getOrDefault(demandeId, 0L);
+            Integer demandeurId = demande.getDemandeur() == null ? null : demande.getDemandeur().getId();
+            boolean mediaComplete = demandeurId != null && Boolean.TRUE.equals(mediaCompletionByDemandeurId.get(demandeurId));
 
             String nom = demande.getDemandeur() == null || demande.getDemandeur().getNom() == null
                 ? ""
@@ -284,6 +292,11 @@
                     <a class="btn-action" href="${pageContext.request.contextPath}/dossiers-en-cours/ajout?demandeId=<%= demandeId %>">
                         Ajout dossier
                     </a>
+                    <% if (!mediaComplete) { %>
+                    <a class="btn-action" href="${pageContext.request.contextPath}/demandeur-media?demandeId=<%= demandeId %>&source=list">
+                        Photo / signature
+                    </a>
+                    <% } %>
                     <a class="btn-action" href="${pageContext.request.contextPath}/demande/<%= demandeId %>">
                         Voir
                     </a>
